@@ -1,103 +1,208 @@
-import Image from "next/image";
+import { Metadata } from 'next'
+import Link from 'next/link'
+import Downloader from '@/components/downloader'
+import TrustedPartners from '@/components/trusted-partners'
+import AnimatedHero from '@/components/animated-hero'
+import Breadcrumb from '@/components/breadcrumb'
+import { getLatestPosts, formatDate } from '@/lib/blog'
+import { Calendar, Clock, Tag, ArrowRight } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'RedGifs Downloader – Bulk download HD videos in seconds',
+  description: 'Stop wasting time — download RedGifs HD videos and cover images in seconds with our free online tool.',
+  openGraph: {
+    title: 'RedGifs Downloader – Bulk download HD videos in seconds',
+    description: 'Stop wasting time — download RedGifs HD videos and cover images in seconds with our free online tool.',
+    type: 'website',
+    url: 'https://redgifsdownloader.top',
+    siteName: 'RedGifs Downloader',
+    images: [
+      {
+        url: '/og.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'RedGifs Downloader - Free Video Download Tool',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'RedGifs Downloader – Bulk download HD videos in seconds',
+    description: 'Stop wasting time — download RedGifs HD videos and cover images in seconds with our free online tool.',
+    images: ['/og.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const latestPosts = getLatestPosts(4)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <AnimatedHero />
+
+      {/* Breadcrumb Navigation */}
+      <div className="container mx-auto px-4">
+        <Breadcrumb />
+      </div>
+
+      {/* Downloader Component */}
+      <section className="py-16 pt-0">
+        <div className="container mx-auto px-4">
+          <Downloader />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Download RedGifs videos in just three simple steps
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary font-bold text-lg">1</span>
+              </div>
+              <h3 className="font-semibold mb-2">Paste URL</h3>
+              <p className="text-sm text-muted-foreground">
+                Copy and paste the RedGifs URL into the input field above
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary font-bold text-lg">2</span>
+              </div>
+              <h3 className="font-semibold mb-2">Click Search</h3>
+              <p className="text-sm text-muted-foreground">
+                Our system processes the URL and generates download links
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary font-bold text-lg">3</span>
+              </div>
+              <h3 className="font-semibold mb-2">Save Files</h3>
+              <p className="text-sm text-muted-foreground">
+                Download the HD video, and cover image to your device
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Latest Blog Posts Section */}
+      <section className="py-16 bg-muted/30">
+        {/* 结构化数据 */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "RedGifs Downloader",
+              "description": "Free RedGifs video, thumbnail and cover downloader tool",
+              "url": "https://redgifsdownloader.top",
+              "applicationCategory": "MultimediaApplication",
+              "operatingSystem": "Any",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              },
+              "featureList": [
+                "HD Video Downloads",
+                "Batch Downloads", 
+                "Cover Image Downloads",
+                "Fast and Secure"
+              ]
+            })
+          }}
+        />
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Latest Blog Posts</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Stay updated with the latest tips, guides, and news about RedGifs downloading
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <div className="grid gap-6">
+              {latestPosts.map((post) => (
+                <article key={post.id} className="bg-card rounded-lg p-6 border hover:shadow-md transition-shadow">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {post.featured && (
+                      <span className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs font-medium">
+                        Featured
+                      </span>
+                    )}
+                    {post.tags.slice(0, 2).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs"
+                      >
+                        <Tag className="h-3 w-3" />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  
+                  <Link href={`/blog/${post.id}`} className="block group">
+                    <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="text-muted-foreground mb-4 line-clamp-3">
+                      {post.excerpt}
+                    </p>
+                  </Link>
+                  
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {formatDate(post.publishedAt)}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {post.readTime} min read
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+            
+            <div className="text-center mt-8">
+              <Link 
+                href="/blog" 
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                View All Posts
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured On Section */}
+      <TrustedPartners />
     </div>
-  );
+  )
 }
