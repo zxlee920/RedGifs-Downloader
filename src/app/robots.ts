@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/admin/'],
     },
-    sitemap: 'https://redgifs-downloader.pages.dev/sitemap.xml',
+    sitemap: 'https://redgifsdownloader.top/sitemap.xml',
   }
 }
