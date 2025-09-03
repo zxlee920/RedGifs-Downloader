@@ -58,9 +58,7 @@ export default function Downloader() {
     setResults([])
 
     try {
-      const apiUrl = process.env.NODE_ENV === 'development' 
-        ? '/api/download' 
-        : 'https://redgifs-downloader.kasonleegm.workers.dev'
+      const apiUrl = 'https://redgifs-downloader.kasonleegm.workers.dev'
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -133,9 +131,7 @@ export default function Downloader() {
         setBatchResults([...results])
 
         try {
-          const apiUrl = process.env.NODE_ENV === 'development' 
-            ? '/api/download' 
-            : 'https://redgifs-downloader.kasonleegm.workers.dev'
+          const apiUrl = 'https://redgifs-downloader.kasonleegm.workers.dev'
           
           const response = await fetch(apiUrl, {
             method: 'POST',
@@ -178,9 +174,7 @@ export default function Downloader() {
   const handleFileDownload = async (fileUrl: string, filename: string) => {
     try {
       // 使用代理下载API来实现真正的文件下载
-      const downloadUrl = process.env.NODE_ENV === 'development' 
-        ? `/api/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
-        : `https://redgifs-downloader.kasonleegm.workers.dev/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+      const downloadUrl = `https://redgifs-downloader.kasonleegm.workers.dev/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
       
       // 创建一个隐藏的链接来触发下载
       const link = document.createElement('a')
