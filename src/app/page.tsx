@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     title: 'RedGifs Downloader – Bulk download HD videos in seconds',
     description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
     type: 'website',
-    url: 'https://redgifsdownloader.top',
+    url: 'https://redgifs-downloader.kasonleegm.workers.dev',
     siteName: 'RedGifs Downloader',
     images: [
       {
@@ -118,8 +118,8 @@ export default function Home() {
               "@context": "https://schema.org",
               "@type": "WebApplication",
               "name": "RedGifs Downloader",
-              "description": "Free RedGifs video, thumbnail and cover downloader tool",
-              "url": "https://redgifsdownloader.top",
+              "description": "Free HD RedGifs video and cover downloader tool",
+              "url": "https://redgifs-downloader.kasonleegm.workers.dev",
               "applicationCategory": "MultimediaApplication",
               "operatingSystem": "Any",
               "offers": {

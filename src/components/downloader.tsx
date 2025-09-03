@@ -58,7 +58,7 @@ export default function Downloader() {
     setResults([])
 
     try {
-      const apiUrl = 'https://redgifs-downloader.kasonleegm.workers.dev'
+      const apiUrl = 'https://redgifs-downloader.kasonleegm.workers.dev/api/download'
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -131,7 +131,7 @@ export default function Downloader() {
         setBatchResults([...results])
 
         try {
-          const apiUrl = 'https://redgifs-downloader.kasonleegm.workers.dev'
+          const apiUrl = 'https://redgifs-downloader.kasonleegm.workers.dev/api/download'
           
           const response = await fetch(apiUrl, {
             method: 'POST',

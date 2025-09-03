@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://redgifsdownloader.top'),
+  metadataBase: new URL('https://redgifs-downloader.kasonleegm.workers.dev'),
   title: "RedGifs Downloader – Bulk download HD videos in seconds",
   description: "Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.",
   authors: [{ name: "RedGifs Downloader Team" }],
