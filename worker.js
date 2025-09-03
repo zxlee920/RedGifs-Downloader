@@ -175,32 +175,28 @@ export default {
         let primaryVideoUrl = null;
         let primaryVideoQuality = 'SD';
         
-        // 根据RedGifs官方文档选择最佳视频源
+        // RedGifs视频有两种格式：分片(m4s)和完整(mp4)
+        // 需要检查是否有完整的mp4文件，否则使用分片文件
         if (gif.urls) {
-          // 1. 优先使用embed_url - 官方推荐的无限制加载方式
-          if (gif.urls.embed_url) {
-            primaryVideoUrl = gif.urls.embed_url;
-            primaryVideoQuality = 'Embed';
-          }
-          // 2. 使用file_url - 直接文件链接
-          else if (gif.urls.file_url) {
-            primaryVideoUrl = gif.urls.file_url;
-            primaryVideoQuality = 'File';
-          }
-          // 3. web_url - 网站URL（无水印）
-          else if (gif.urls.web_url) {
-            primaryVideoUrl = gif.urls.web_url;
-            primaryVideoQuality = 'Web';
-          }
-          // 4. HD质量（可能有水印但质量好）
-          else if (gif.urls.hd) {
+          // 1. 优先使用HD完整视频（有声音，无水印）
+          if (gif.urls.hd && !gif.urls.hd.includes('.m4s')) {
             primaryVideoUrl = gif.urls.hd;
             primaryVideoQuality = 'HD';
           }
-          // 5. SD质量作为备选
-          else if (gif.urls.sd) {
+          // 2. SD完整视频
+          else if (gif.urls.sd && !gif.urls.sd.includes('.m4s')) {
             primaryVideoUrl = gif.urls.sd;
             primaryVideoQuality = 'SD';
+          }
+          // 3. 如果只有分片文件，尝试构造完整视频URL
+          else if (gif.urls.hd) {
+            // 将.m4s替换为.mp4来获取完整视频
+            primaryVideoUrl = gif.urls.hd.replace(/\.m4s$/, '.mp4');
+            primaryVideoQuality = 'HD-Full';
+          }
+          else if (gif.urls.sd) {
+            primaryVideoUrl = gif.urls.sd.replace(/\.m4s$/, '.mp4');
+            primaryVideoQuality = 'SD-Full';
           }
         }
         
