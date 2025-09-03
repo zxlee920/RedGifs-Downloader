@@ -6,7 +6,7 @@ build = { command = "npm run build" }
 [assets]
 directory = "./out"
 
-# 暂时移除自定义域名路由进行测试
-# [[routes]]
-# pattern = "redgifsdownloader.top/*"
-# zone_name = "redgifsdownloader.top"
+# 自定义域名路由配置
+[[routes]]
+pattern = "redgifsdownloader.top/*"
+zone_name = "redgifsdownloader.top"
