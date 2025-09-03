@@ -118,7 +118,7 @@ export default function Home() {
               "@context": "https://schema.org",
               "@type": "WebApplication",
               "name": "RedGifs Downloader",
-              "description": "Free HD RedGifs video and cover downloader tool",
+              "description": "RedGifs Downloader – Bulk download HD videos in seconds",
               "url": "https://redgifs-downloader.kasonleegm.workers.dev",
               "applicationCategory": "MultimediaApplication",
               "operatingSystem": "Any",
