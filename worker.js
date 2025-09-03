@@ -47,22 +47,33 @@ export default {
       }
     }
 
-    // Handle static file requests - return API info for root
-    if (request.method === 'GET' && url.pathname === '/') {
-      return new Response(JSON.stringify({ 
-        message: 'RedGifs Downloader API',
-        version: '1.0.0',
-        endpoints: {
-          'POST /': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
-          'GET /proxy-download': 'Proxy download file - query params: url, filename'
+    // Handle static file requests
+    if (request.method === 'GET') {
+      try {
+        // Try to serve static files from the built Next.js app
+        const staticResponse = await env.ASSETS.fetch(request);
+        if (staticResponse.status !== 404) {
+          return staticResponse;
         }
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
+      } catch (error) {
+        // If ASSETS binding is not available, return API info for root
+        if (url.pathname === '/') {
+          return new Response(JSON.stringify({ 
+            message: 'RedGifs Downloader API',
+            version: '1.0.0',
+            endpoints: {
+              'POST /': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
+              'GET /proxy-download': 'Proxy download file - query params: url, filename'
+            }
+          }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+      }
     }
 
     // Only handle POST requests for download
