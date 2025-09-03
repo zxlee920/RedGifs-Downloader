@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import Navigation from '@/components/navigation'
@@ -10,11 +9,6 @@ import Analytics from '@/components/analytics';
 import HydrationFix from '@/components/hydration-fix';
 import Script from "next/script";
 
-const inter = Inter({ 
-  subsets: ["latin"],
-  display: 'swap',
-  preload: true
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.baseUrl),
@@ -62,7 +56,6 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="preload" href="/globals.css" as="style" />
         <style dangerouslySetInnerHTML={{
           __html: `
             html { visibility: hidden; }
@@ -73,7 +66,7 @@ export default function RootLayout({
           <meta name={webmasterMeta.name} content={webmasterMeta.content} />
         )}
       </head>
-      <body className={`${inter.className} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
+      <body className="antialiased min-h-screen flex flex-col" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
