@@ -227,15 +227,15 @@ export default function Downloader() {
       </CardHeader>
       <CardContent>
             <Tabs defaultValue="single" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 relative">
                 <TabsTrigger value="single" className="flex items-center sm:gap-2">
                   <Download className="h-4 w-4 hidden sm:block" />
                   <span className="sm:ml-0 ml-0">Single Download</span>
                 </TabsTrigger>
-                <TabsTrigger value="batch" className="flex items-center sm:gap-2">
+                <TabsTrigger value="batch" className="flex items-center sm:gap-2 relative">
                   <List className="h-4 w-4 hidden sm:block" />
                   <span className="sm:ml-0 ml-0">Batch Download</span>
-                  <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 ml-1 rounded-full">
+                  <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 ml-0 sm:ml-5 rounded-full sm:static absolute -top-4 left-1/2 transform -translate-x-1/2 sm:transform-none">
                     NEW
                   </Badge>
                 </TabsTrigger>
