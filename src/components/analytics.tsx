@@ -7,7 +7,7 @@ export default function Analytics() {
     <>
       {/* Google Analytics */}
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-MXQBHQHXRK"
+        src="https://www.googletagmanager.com/gtag/js?id=G-YM0P7YDGWF"
         strategy="beforeInteractive"
       />
       <Script id="google-analytics" strategy="beforeInteractive">
@@ -15,11 +15,7 @@ export default function Analytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-MXQBHQHXRK', {
-            cookie_expires: 63072000,
-            cookie_update: true,
-            cookie_flags: 'SameSite=None;Secure'
-          });
+          gtag('config', 'G-YM0P7YDGWF');
         `}
       </Script>
       
