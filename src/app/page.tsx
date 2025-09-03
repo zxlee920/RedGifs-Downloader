@@ -6,19 +6,20 @@ import AnimatedHero from '@/components/animated-hero'
 import Breadcrumb from '@/components/breadcrumb'
 import { getLatestPosts, formatDate } from '@/lib/blog'
 import { Calendar, Clock, Tag, ArrowRight } from 'lucide-react'
+import { siteConfig } from '@/config/site'
 
 export const metadata: Metadata = {
-  title: 'RedGifs Downloader – Bulk download HD videos in seconds',
-  description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
+  title: siteConfig.title,
+  description: siteConfig.description,
   openGraph: {
-    title: 'RedGifs Downloader – Bulk download HD videos in seconds',
-    description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
+    title: siteConfig.title,
+    description: siteConfig.description,
     type: 'website',
-    url: 'https://redgifs-downloader.kasonleegm.workers.dev',
-    siteName: 'RedGifs Downloader',
+    url: siteConfig.baseUrl,
+    siteName: siteConfig.name,
     images: [
       {
-        url: '/og.jpg',
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
         alt: 'RedGifs Downloader - Free Video Download Tool',
@@ -27,9 +28,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'RedGifs Downloader – Bulk download HD videos in seconds',
-    description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
-    images: ['/og.jpg'],
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
   },
   robots: {
     index: true,
@@ -117,9 +118,9 @@ export default function Home() {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebApplication",
-              "name": "RedGifs Downloader",
-              "description": "RedGifs Downloader – Bulk download HD videos in seconds",
-              "url": "https://redgifs-downloader.kasonleegm.workers.dev",
+              "name": siteConfig.name,
+              "description": siteConfig.title,
+              "url": siteConfig.baseUrl,
               "applicationCategory": "MultimediaApplication",
               "operatingSystem": "Any",
               "offers": {

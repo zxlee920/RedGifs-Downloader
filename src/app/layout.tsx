@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { siteConfig } from "@/config/site";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -12,20 +13,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://redgifs-downloader.kasonleegm.workers.dev'),
-  title: "RedGifs Downloader – Bulk download HD videos in seconds",
-  description: "Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.",
-  authors: [{ name: "RedGifs Downloader Team" }],
+  metadataBase: new URL(siteConfig.baseUrl),
+  title: siteConfig.title,
+  description: siteConfig.description,
+  authors: [{ name: siteConfig.author }],
   openGraph: {
-    title: "RedGifs Downloader – Bulk download HD videos in seconds",
-    description: "Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.",
+    title: siteConfig.title,
+    description: siteConfig.description,
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RedGifs Downloader – Bulk download HD videos in seconds",
-    description: "Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.",
+    title: siteConfig.title,
+    description: siteConfig.description,
   },
   robots: {
     index: true,

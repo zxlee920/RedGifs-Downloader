@@ -1,10 +1,11 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { Calendar, Clock, Tag, User } from 'lucide-react'
-import Breadcrumb from '@/components/breadcrumb'
-import { getPostById, getRelatedPosts, formatDate, getAllPosts } from '@/lib/blog'
 import ReactMarkdown from 'react-markdown'
+import { getPostById, getAllPosts, formatDate } from '@/lib/blog'
+import { Calendar, Clock, Tag, ArrowLeft, User } from 'lucide-react'
+import Link from 'next/link'
+import Breadcrumb from '@/components/breadcrumb'
+import { siteConfig } from '@/config/site'
 
 // 定义页面参数类型
 interface PageParams {
@@ -38,8 +39,8 @@ export async function generateMetadata({ params }: { params: PageParams }): Prom
       title: post.title,
       description: post.excerpt,
       type: 'article',
-      url: `https://redgifsdownloader.top/blog/${slug}`,
-      siteName: 'RedGifs Downloader',
+      url: siteConfig.getUrl(`/blog/${slug}`),
+      siteName: siteConfig.name,
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt,
       authors: [post.author],
@@ -70,7 +71,9 @@ export default async function BlogPostPage({ params }: { params: PageParams }) {
     notFound()
   }
 
-  const relatedPosts = getRelatedPosts(post.id)
+  // 获取相关文章（简单实现：获取最新的3篇文章，排除当前文章）
+  const allPosts = getAllPosts()
+  const relatedPosts = allPosts.filter(p => p.id !== post.id).slice(0, 3)
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -127,11 +130,11 @@ export default async function BlogPostPage({ params }: { params: PageParams }) {
               "publisher": {
                 "@type": "Organization",
                 "name": "RedGifs Downloader",
-                "url": "https://redgifsdownloader.top"
+                "url": siteConfig.baseUrl
               },
               "datePublished": post.publishedAt,
               "dateModified": post.updatedAt,
-              "url": `https://redgifsdownloader.top/blog/${slug}`,
+              "url": siteConfig.getUrl(`/blog/${slug}`),
               "keywords": post.tags.join(", "),
               "articleSection": "Technology",
               "wordCount": post.content.split(' ').length
@@ -174,7 +177,7 @@ export default async function BlogPostPage({ params }: { params: PageParams }) {
           <section className="border-t pt-8">
             <h2 className="text-2xl font-bold mb-6">Related Articles</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {relatedPosts.map((relatedPost) => (
+              {relatedPosts.map((relatedPost: any) => (
                 <Link
                   key={relatedPost.id}
                   href={`/blog/${relatedPost.id}`}

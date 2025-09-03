@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Breadcrumb from '@/components/breadcrumb'
+import { siteConfig } from '@/config/site'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - RedGifs Downloader',
@@ -8,11 +9,11 @@ export const metadata: Metadata = {
     title: 'Privacy Policy - RedGifs Downloader',
     description: 'Privacy Policy for RedGifs Downloader. Learn how we protect your privacy and handle your data.',
     type: 'website',
-    url: 'https://redgifsdownloader.top/privacy',
-    siteName: 'RedGifs Downloader',
+    url: siteConfig.getUrl('/privacy'),
+    siteName: siteConfig.name,
     images: [
       {
-        url: '/og.jpg',
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
         alt: 'RedGifs Downloader Privacy Policy',

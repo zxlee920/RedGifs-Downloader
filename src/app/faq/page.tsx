@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Breadcrumb from '@/components/breadcrumb'
+import { siteConfig } from '@/config/site'
 import {
   Accordion,
   AccordionContent,
@@ -14,11 +15,11 @@ export const metadata: Metadata = {
     title: 'FAQ - RedGifs Downloader',
     description: 'Frequently asked questions about RedGifs downloader tool',
     type: 'website',
-    url: 'https://redgifsdownloader.top/faq',
-    siteName: 'RedGifs Downloader',
+    url: siteConfig.getUrl('/faq'),
+    siteName: siteConfig.name,
     images: [
       {
-        url: '/og.jpg',
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
         alt: 'RedGifs Downloader FAQ',

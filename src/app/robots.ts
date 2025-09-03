@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next'
+import { siteConfig } from '@/config/site'
 
 export const dynamic = 'force-static'
 
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/admin/'],
     },
-    sitemap: 'https://redgifsdownloader.top/sitemap.xml',
+    sitemap: siteConfig.getUrl('/sitemap.xml'),
   }
 }

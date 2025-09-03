@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Breadcrumb from '@/components/breadcrumb'
+import { siteConfig } from '@/config/site'
 
 export const metadata: Metadata = {
   title: 'Terms of Service - RedGifs Downloader',
@@ -8,11 +9,11 @@ export const metadata: Metadata = {
     title: 'Terms of Service - RedGifs Downloader',
     description: 'Terms of Service for RedGifs Downloader. Read our terms and conditions for using our free video download service.',
     type: 'website',
-    url: 'https://redgifsdownloader.top/terms',
-    siteName: 'RedGifs Downloader',
+    url: siteConfig.getUrl('/terms'),
+    siteName: siteConfig.name,
     images: [
       {
-        url: '/og.jpg',
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
         alt: 'RedGifs Downloader Terms of Service',
