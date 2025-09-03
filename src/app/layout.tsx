@@ -66,6 +66,8 @@ export default function RootLayout({
           <meta name={webmasterMeta.name} content={webmasterMeta.content} />
         )}
         
+        {/* Analytics Scripts in Head */}
+        <Analytics />
       </head>
       <body className="antialiased min-h-screen flex flex-col" suppressHydrationWarning>
         <ThemeProvider
@@ -81,7 +83,6 @@ export default function RootLayout({
           <Footer />
         </ThemeProvider>
         
-        <Analytics />
         <HydrationFix />
       </body>
     </html>
