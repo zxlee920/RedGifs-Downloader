@@ -33,6 +33,72 @@ export default {
       });
     }
     
+    // Handle HLS conversion API
+    if (request.method === 'POST' && url.pathname === '/api/convert-hls') {
+      try {
+        const { m3u8Url, outputFilename } = await request.json();
+        
+        // 获取m3u8播放列表
+        const m3u8Response = await fetch(m3u8Url);
+        if (!m3u8Response.ok) {
+          throw new Error('Failed to fetch m3u8 playlist');
+        }
+        
+        const m3u8Content = await m3u8Response.text();
+        
+        // 解析ts文件URLs
+        const tsUrls = [];
+        const lines = m3u8Content.split('\n');
+        const baseUrl = m3u8Url.substring(0, m3u8Url.lastIndexOf('/') + 1);
+        
+        for (const line of lines) {
+          if (line.trim() && !line.startsWith('#')) {
+            const tsUrl = line.startsWith('http') ? line : baseUrl + line;
+            tsUrls.push(tsUrl.trim());
+          }
+        }
+        
+        // 下载所有ts分片
+        const tsSegments = [];
+        for (const tsUrl of tsUrls) {
+          const tsResponse = await fetch(tsUrl);
+          if (tsResponse.ok) {
+            const tsData = await tsResponse.arrayBuffer();
+            tsSegments.push(new Uint8Array(tsData));
+          }
+        }
+        
+        // 合并ts分片
+        const totalLength = tsSegments.reduce((sum, segment) => sum + segment.length, 0);
+        const mergedData = new Uint8Array(totalLength);
+        let offset = 0;
+        
+        for (const segment of tsSegments) {
+          mergedData.set(segment, offset);
+          offset += segment.length;
+        }
+        
+        return new Response(mergedData, {
+          headers: {
+            'Content-Type': 'video/mp4',
+            'Content-Disposition': `attachment; filename="${outputFilename}"`,
+            ...corsHeaders,
+          },
+        });
+        
+      } catch (error) {
+        return new Response(JSON.stringify({ 
+          error: 'HLS conversion failed: ' + error.message 
+        }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      }
+    }
+
     // Handle POST requests for download API
     if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download')) {
       try {
@@ -171,29 +237,44 @@ export default {
         // Prepare download links
         const downloads = [];
         
-        if (gif.urls && (gif.urls.hd || gif.urls.sd)) {
-          downloads.push({
-            type: 'video',
-            url: gif.urls.hd || gif.urls.sd,
-            filename: `${gif.id}_video.mp4`,
-            quality: gif.urls.hd ? 'HD' : 'SD',
-            size: null
-          });
-        }
-        
-        if (gif.urls && gif.urls.poster) {
-          downloads.push({
-            type: 'cover',
-            url: gif.urls.poster,
-            filename: `${gif.id}_cover.jpg`,
-            quality: 'Standard',
-            size: null
-          });
+        if (gif.urls) {
+          // ✅ 优先返回 HLS（有声、无水印）
+          if (gif.urls.hls) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.hls,
+              filename: `${gif.id}.m3u8`,
+              quality: 'HLS (with audio, no watermark)',
+              size: null
+            });
+          }
+
+          // 备用：mp4 (无声，可能带水印)
+          if (gif.urls.hd || gif.urls.sd) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.hd || gif.urls.sd,
+              filename: `${gif.id}_preview.mp4`,
+              quality: gif.urls.hd ? 'HD mp4 (no audio)' : 'SD mp4 (no audio)',
+              size: null
+            });
+          }
+
+          // 视频封面
+          if (gif.urls.poster) {
+            downloads.push({
+              type: 'cover',
+              url: gif.urls.poster,
+              filename: `${gif.id}_cover.jpg`,
+              quality: 'Poster',
+              size: null
+            });
+          }
         }
 
         if (downloads.length === 0) {
-          return new Response(JSON.stringify({ 
-            error: 'No downloadable content found. The video URLs may be invalid or inaccessible.' 
+          return new Response(JSON.stringify({
+            error: 'No downloadable content found. The video may be private or unavailable.'
           }), {
             status: 404,
             headers: {

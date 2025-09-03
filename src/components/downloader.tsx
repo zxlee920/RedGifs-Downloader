@@ -174,22 +174,66 @@ export default function Downloader() {
 
   const handleFileDownload = async (fileUrl: string, filename: string) => {
     try {
-      // 使用代理下载API来实现真正的文件下载
-      const downloadUrl = `/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+      // 检查是否为m3u8文件
+      if (filename.endsWith('.m3u8')) {
+        // HLS流处理：解析m3u8 → 下载ts分片 → 合并为mp4
+        await downloadHLSAsMP4(fileUrl, filename.replace('.m3u8', '.mp4'))
+      } else {
+        // 普通文件直接下载
+        const downloadUrl = `/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+        
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = filename
+        link.style.display = 'none'
+        
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (err) {
+      console.error('Download failed:', err)
+      window.open(fileUrl, '_blank')
+    }
+  }
+
+  const downloadHLSAsMP4 = async (m3u8Url: string, outputFilename: string) => {
+    try {
+      // 调用Worker的HLS转换API
+      const response = await fetch('/api/convert-hls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          m3u8Url: m3u8Url,
+          outputFilename: outputFilename
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('HLS conversion failed')
+      }
+
+      // 获取转换后的mp4文件
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
       
-      // 创建一个隐藏的链接来触发下载
       const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename
+      link.href = url
+      link.download = outputFilename
       link.style.display = 'none'
       
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      
+      // 清理临时URL
+      window.URL.revokeObjectURL(url)
     } catch (err) {
-      console.error('Download failed:', err)
-      // 如果代理下载失败，回退到直接链接
-      window.open(fileUrl, '_blank')
+      console.error('HLS download failed:', err)
+      // 回退：直接打开m3u8链接
+      window.open(m3u8Url, '_blank')
     }
   }
 
