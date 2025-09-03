@@ -290,7 +290,7 @@ export default function Downloader() {
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-medium">Download links ready!</span>
                 </div>
-                <div className="flex gap-6 items-start">
+                <div className="flex gap-2 md:gap-6 items-start">
                   {/* 左侧封面图预览 */}
                   <div className="flex-shrink-0">
                     {results.find(r => r.type === 'cover') && (
@@ -315,7 +315,7 @@ export default function Downloader() {
                   <div className="flex-1 space-y-3">
                     {results.map((result, index) => (
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg min-h-[3.5rem]">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 md:gap-3">
                           {getIcon(result.type)}
                           <div className="hidden sm:block">
                             <div className="font-medium text-sm">{result.filename}</div>
