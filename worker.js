@@ -12,7 +12,25 @@ export default {
       });
     }
 
-    // Only handle POST requests to /api/download
+    // Handle GET requests with a simple API info response
+    if (request.method === 'GET') {
+      return new Response(JSON.stringify({ 
+        message: 'RedGifs Downloader API',
+        version: '1.0.0',
+        endpoints: {
+          'POST /': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
+          'GET /proxy-download': 'Proxy download file - query params: url, filename'
+        }
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
+    // Only handle POST requests for download
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
