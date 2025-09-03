@@ -5,6 +5,8 @@ import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { siteConfig } from "@/config/site";
+import { analyticsConfig, getGoogleAnalyticsScript, getMicrosoftClarityScript, getMicrosoftWebmasterMeta } from "@/config/analytics";
+import Script from "next/script";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -42,6 +44,9 @@ export const metadata: Metadata = {
   verification: {
     google: 'your-google-verification-code',
   },
+  other: {
+    'msvalidate.01': getMicrosoftWebmasterMeta()?.content || '',
+  },
 };
 
 export default function RootLayout({
@@ -49,10 +54,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaScript = getGoogleAnalyticsScript()
+  const clarityScript = getMicrosoftClarityScript()
+  const webmasterMeta = getMicrosoftWebmasterMeta()
+
   return (
     <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        {webmasterMeta && (
+          <meta name={webmasterMeta.name} content={webmasterMeta.content} />
+        )}
       </head>
       <body className={`${inter.className} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
         <ThemeProvider
@@ -67,6 +79,26 @@ export default function RootLayout({
           </main>
           <Footer />
         </ThemeProvider>
+        
+        {/* Google Analytics */}
+        {gaScript && (
+          <>
+            <Script
+              src={gaScript.src}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {gaScript.innerHTML}
+            </Script>
+          </>
+        )}
+        
+        {/* Microsoft Clarity */}
+        {clarityScript && (
+          <Script id="microsoft-clarity" strategy="afterInteractive">
+            {clarityScript}
+          </Script>
+        )}
       </body>
     </html>
   );
