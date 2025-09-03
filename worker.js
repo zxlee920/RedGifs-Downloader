@@ -89,7 +89,9 @@ export default {
         }
 
         // 如果API失败，尝试网页抓取作为备用方案
+        console.log('API failed, trying web scraping for:', videoUrl);
         const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
+        console.log('Scraping result:', scrapedData);
         
         if (scrapedData && (scrapedData.hlsUrl || scrapedData.videoUrl)) {
           const downloads = [];
@@ -356,10 +358,15 @@ class RedGifsAPI {
         }
       });
       
+      console.log('Auth response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
         this.token = data.token;
+        console.log('Token obtained:', this.token ? 'Yes' : 'No');
         return this.token;
+      } else {
+        console.log('Auth failed:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Auth token error:', error);
@@ -393,11 +400,17 @@ class RedGifsAPI {
         
         const response = await fetch(apiUrl, { headers });
         
+        console.log(`API ${apiUrl} response:`, response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('API data received:', data);
           return this.processGifData(data.gif);
+        } else {
+          console.log(`API ${apiUrl} failed:`, response.status, await response.text());
         }
       } catch (error) {
+        console.error(`API ${apiUrl} error:`, error);
         continue;
       }
     }
