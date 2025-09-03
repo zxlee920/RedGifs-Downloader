@@ -2,10 +2,8 @@ name = "redgifs-downloader"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
-[[assets]]
-bucket = "./out"
-include = ["**/*"]
-exclude = []
+[assets]
+directory = "./out"
 
 [env.production]
 name = "redgifs-downloader"
