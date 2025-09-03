@@ -91,16 +91,31 @@ export default {
         // 如果API失败，尝试网页抓取作为备用方案
         const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
         
-        if (scrapedData && scrapedData.videoUrl) {
-          const downloads = [
-            {
+        if (scrapedData && (scrapedData.hlsUrl || scrapedData.videoUrl)) {
+          const downloads = [];
+          
+          // 优先添加HLS链接（有音频，无水印）
+          if (scrapedData.hlsUrl) {
+            downloads.push({
+              type: 'video',
+              url: scrapedData.hlsUrl,
+              filename: `${videoId}.m3u8`,
+              quality: 'HLS (Audio + No Watermark)',
+              size: null,
+              preferred: true
+            });
+          }
+          
+          // 添加MP4链接作为备用
+          if (scrapedData.videoUrl) {
+            downloads.push({
               type: 'video',
               url: scrapedData.videoUrl,
               filename: `${videoId}_video.mp4`,
-              quality: 'HD',
+              quality: 'HD (May have watermark)',
               size: null
-            }
-          ];
+            });
+          }
           
           if (scrapedData.posterUrl) {
             downloads.push({
@@ -119,7 +134,7 @@ export default {
             duration: 30,
             views: 0,
             likes: 0,
-            hasAudio: true,
+            hasAudio: scrapedData.hlsUrl ? true : false,
             downloads: downloads,
             note: 'Fallback: content extracted from webpage'
           }), {
@@ -397,7 +412,19 @@ class RedGifsAPI {
     const downloads = [];
     const urls = gif.urls;
 
-    // 优先使用embed_url（避免IP泄露）
+    // 优先使用HLS流（有音频，无水印）
+    if (urls.hls) {
+      downloads.push({
+        type: 'video',
+        url: urls.hls,
+        filename: `${gif.id}.m3u8`,
+        quality: 'HLS (Audio + No Watermark)',
+        size: null,
+        preferred: true
+      });
+    }
+
+    // 其次使用embed_url（避免IP泄露）
     if (urls.embed_url) {
       downloads.push({
         type: 'video',
@@ -405,28 +432,28 @@ class RedGifsAPI {
         filename: `${gif.id}_embed.mp4`,
         quality: 'Embed (No IP leak)',
         size: null,
-        preferred: true
+        preferred: !urls.hls // 只有没有HLS时才标记为推荐
       });
     }
 
-    // HD视频
+    // HD视频（可能有水印）
     if (urls.hd) {
       downloads.push({
         type: 'video',
         url: urls.hd,
         filename: `${gif.id}_hd.mp4`,
-        quality: 'HD',
+        quality: 'HD (May have watermark)',
         size: null
       });
     }
 
-    // SD视频
+    // SD视频（可能有水印）
     if (urls.sd) {
       downloads.push({
         type: 'video',
         url: urls.sd,
         filename: `${gif.id}_sd.mp4`,
-        quality: 'SD',
+        quality: 'SD (May have watermark)',
         size: null
       });
     }
@@ -520,13 +547,15 @@ async function scrapeRedGifsPage(url, videoId) {
 
     const html = await response.text();
     
-    // Extract video URL from HTML
-    const videoUrlMatch = html.match(/"(https:\/\/[^"]*\.mp4[^"]*)"/);
-    const posterMatch = html.match(/"(https:\/\/[^"]*poster[^"]*\.jpg[^"]*)"/);
+    // 优先提取HLS链接（有音频，无水印）
+    const hlsMatch = html.match(/"hls":"(https:[^"]+\.m3u8)"/);
+    const hdSrcMatch = html.match(/"hdSrc":"(https:[^"]+\.mp4)"/);
+    const posterMatch = html.match(/"poster":"(https:[^"]+\.jpg)"/);
 
-    if (videoUrlMatch) {
+    if (hlsMatch || hdSrcMatch) {
       return {
-        videoUrl: videoUrlMatch[1],
+        hlsUrl: hlsMatch ? hlsMatch[1] : null,
+        videoUrl: hdSrcMatch ? hdSrcMatch[1] : null,
         posterUrl: posterMatch ? posterMatch[1] : null
       };
     }
