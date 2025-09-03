@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import Navigation from "@/components/navigation";
-import Footer from "@/components/footer";
-import { ThemeProvider } from "@/components/theme-provider";
-import { siteConfig } from "@/config/site";
-import { analyticsConfig, getGoogleAnalyticsScript, getMicrosoftClarityScript, getMicrosoftWebmasterMeta } from "@/config/analytics";
+import { Inter } from 'next/font/google'
+import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
+import Navigation from '@/components/navigation'
+import Footer from '@/components/footer'
+import { siteConfig } from '@/config/site'
+import { getMicrosoftWebmasterMeta } from '@/config/analytics'
+import Analytics from '@/components/analytics';
 import Script from "next/script";
 
 const inter = Inter({ 
@@ -54,8 +55,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const gaScript = getGoogleAnalyticsScript()
-  const clarityScript = getMicrosoftClarityScript()
   const webmasterMeta = getMicrosoftWebmasterMeta()
 
   return (
@@ -65,6 +64,7 @@ export default function RootLayout({
         {webmasterMeta && (
           <meta name={webmasterMeta.name} content={webmasterMeta.content} />
         )}
+        
       </head>
       <body className={`${inter.className} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
         <ThemeProvider
@@ -80,25 +80,7 @@ export default function RootLayout({
           <Footer />
         </ThemeProvider>
         
-        {/* Google Analytics */}
-        {gaScript && (
-          <>
-            <Script
-              src={gaScript.src}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {gaScript.innerHTML}
-            </Script>
-          </>
-        )}
-        
-        {/* Microsoft Clarity */}
-        {clarityScript && (
-          <Script id="microsoft-clarity" strategy="afterInteractive">
-            {clarityScript}
-          </Script>
-        )}
+        <Analytics />
       </body>
     </html>
   );

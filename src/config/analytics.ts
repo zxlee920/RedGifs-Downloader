@@ -24,32 +24,33 @@ export const analyticsConfig = {
     return process.env.NODE_ENV === 'production'
   },
   
-  // 是否启用分析工具（只在生产环境启用）
+  // 是否启用分析工具（始终启用以便测试）
   shouldLoadAnalytics: () => {
-    return analyticsConfig.isProduction()
+    return true // 改为始终启用，确保GA能正常检测
   }
 }
 
 // Google Analytics脚本
 export const getGoogleAnalyticsScript = () => {
-  if (!analyticsConfig.googleAnalytics.enabled || !analyticsConfig.shouldLoadAnalytics()) {
+  if (!analyticsConfig.googleAnalytics.enabled) {
     return null
   }
   
   return {
     src: `https://www.googletagmanager.com/gtag/js?id=${analyticsConfig.googleAnalytics.id}`,
     innerHTML: `
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '${analyticsConfig.googleAnalytics.id}');
-    `
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', '${analyticsConfig.googleAnalytics.id}');
+`
   }
 }
 
 // Microsoft Clarity脚本
 export const getMicrosoftClarityScript = () => {
-  if (!analyticsConfig.microsoftClarity.enabled || !analyticsConfig.shouldLoadAnalytics()) {
+  if (!analyticsConfig.microsoftClarity.enabled) {
     return null
   }
   
