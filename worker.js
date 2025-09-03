@@ -34,7 +34,7 @@ export default {
     }
     
     // Handle POST requests for download API
-    if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download')) {
+    if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download' || url.pathname.startsWith('/api/download'))) {
       try {
         const { url: videoUrl } = await request.json();
 
@@ -303,12 +303,15 @@ export default {
         }
       } catch (error) {
         // If ASSETS binding is not available, return API info for root
-        if (url.pathname === '/') {
+        if (url.pathname === '/' || url.pathname === '/api/download') {
           return new Response(JSON.stringify({ 
             message: 'RedGifs Downloader API',
             version: '1.0.0',
+            method: request.method,
+            path: url.pathname,
             endpoints: {
               'POST /': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
+              'POST /api/download': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
               'GET /proxy-download': 'Proxy download file - query params: url, filename'
             }
           }), {
