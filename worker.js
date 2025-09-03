@@ -175,28 +175,32 @@ export default {
         let primaryVideoUrl = null;
         let primaryVideoQuality = 'SD';
         
-        // RedGifs视频有两种格式：分片(m4s)和完整(mp4)
-        // 需要检查是否有完整的mp4文件，否则使用分片文件
+        // 多种策略获取最佳视频源
         if (gif.urls) {
-          // 1. 优先使用HD完整视频（有声音，无水印）
-          if (gif.urls.hd && !gif.urls.hd.includes('.m4s')) {
+          // 策略1: 尝试构造无水印的直接下载链接
+          if (gif.urls.hd) {
+            // 移除签名参数，获取原始文件
+            let cleanUrl = gif.urls.hd.split('?')[0];
+            // 确保是mp4格式
+            if (cleanUrl.includes('.m4s')) {
+              cleanUrl = cleanUrl.replace(/\.m4s$/, '.mp4');
+            }
+            primaryVideoUrl = cleanUrl;
+            primaryVideoQuality = 'HD-Clean';
+          }
+          // 策略2: 使用原始HD链接
+          else if (gif.urls.hd) {
             primaryVideoUrl = gif.urls.hd;
             primaryVideoQuality = 'HD';
           }
-          // 2. SD完整视频
-          else if (gif.urls.sd && !gif.urls.sd.includes('.m4s')) {
-            primaryVideoUrl = gif.urls.sd;
-            primaryVideoQuality = 'SD';
-          }
-          // 3. 如果只有分片文件，尝试构造完整视频URL
-          else if (gif.urls.hd) {
-            // 将.m4s替换为.mp4来获取完整视频
-            primaryVideoUrl = gif.urls.hd.replace(/\.m4s$/, '.mp4');
-            primaryVideoQuality = 'HD-Full';
-          }
+          // 策略3: SD备选
           else if (gif.urls.sd) {
-            primaryVideoUrl = gif.urls.sd.replace(/\.m4s$/, '.mp4');
-            primaryVideoQuality = 'SD-Full';
+            let cleanUrl = gif.urls.sd.split('?')[0];
+            if (cleanUrl.includes('.m4s')) {
+              cleanUrl = cleanUrl.replace(/\.m4s$/, '.mp4');
+            }
+            primaryVideoUrl = cleanUrl;
+            primaryVideoQuality = 'SD-Clean';
           }
         }
         
@@ -244,13 +248,14 @@ export default {
         }
 
         const debugInfo = {
-          version: '2.1.0',
+          version: '2.2.0',
           timestamp: Date.now(),
-          logicType: 'mp4-priority',
+          logicType: 'clean-url-strategy',
           urlProcessing: downloads.map(d => ({
             type: d.type,
             quality: d.quality,
             isM4s: d.url.includes('.m4s'),
+            hasSignature: d.url.includes('?'),
             urlPattern: d.url.substring(0, 50) + '...'
           }))
         };
