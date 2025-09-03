@@ -175,28 +175,21 @@ export default {
         let primaryVideoUrl = null;
         let primaryVideoQuality = 'SD';
         
-        // 获取有音频的完整视频文件
-        if (gif.urls) {
-          // 策略1: 直接使用原始HD链接（保留所有参数，确保音频）
-          if (gif.urls.hd) {
-            primaryVideoUrl = gif.urls.hd;
-            primaryVideoQuality = 'HD-Audio';
-          }
-          // 策略2: SD备选（保留原始链接）
-          else if (gif.urls.sd) {
-            primaryVideoUrl = gif.urls.sd;
-            primaryVideoQuality = 'SD-Audio';
-          }
-        }
+        // 仿照yt-dlp实现，提供多种格式选择
+        const formats = ['hd', 'sd', 'gif'];
+        const qualityPriority = { 'hd': 3, 'sd': 2, 'gif': 1 };
         
-        if (primaryVideoUrl) {
-          downloads.push({
-            type: 'video',
-            url: primaryVideoUrl,
-            filename: `${gif.id}_video.mp4`,
-            quality: primaryVideoQuality,
-            size: null
-          });
+        for (const format of formats) {
+          if (gif.urls && gif.urls[format]) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls[format],
+              filename: `${gif.id}_${format}.mp4`,
+              quality: format.toUpperCase(),
+              priority: qualityPriority[format],
+              size: null
+            });
+          }
         }
         
         if (gif.urls && (gif.urls.poster || gif.urls.thumb)) {
@@ -233,15 +226,16 @@ export default {
         }
 
         const debugInfo = {
-          version: '2.3.0',
+          version: '2.4.0',
           timestamp: Date.now(),
-          logicType: 'preserve-audio-strategy',
+          logicType: 'yt-dlp-multi-format',
+          availableFormats: formats.filter(f => gif.urls && gif.urls[f]),
           urlProcessing: downloads.map(d => ({
             type: d.type,
             quality: d.quality,
+            priority: d.priority || 0,
             isM4s: d.url.includes('.m4s'),
             hasSignature: d.url.includes('?'),
-            preservedOriginal: true,
             urlPattern: d.url.substring(0, 50) + '...'
           }))
         };
