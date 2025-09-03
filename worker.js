@@ -47,11 +47,8 @@ export default {
       }
     }
 
-    // Handle POST requests for download API
-    if (request.method === 'POST') {
-      // Continue to download logic below
-    } else if (request.method === 'GET') {
-      // Handle static file requests for GET
+    // Handle GET requests for static files
+    if (request.method === 'GET') {
       try {
         // Try to serve static files from the built Next.js app
         const staticResponse = await env.ASSETS.fetch(request);
@@ -80,8 +77,10 @@ export default {
       
       // If no static file found, return 404
       return new Response('Not Found', { status: 404 });
-    } else {
-      // Method not allowed for other methods
+    }
+
+    // Handle POST requests for download API
+    if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
         headers: {
