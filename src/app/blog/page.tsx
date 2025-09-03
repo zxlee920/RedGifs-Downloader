@@ -5,6 +5,8 @@ import Breadcrumb from '@/components/breadcrumb'
 import Pagination from '@/components/pagination'
 import { getPaginatedPosts, formatDate } from '@/lib/blog'
 
+export const dynamic = 'force-static'
+
 export const metadata: Metadata = {
   title: 'Blog - RedGifs Downloader',
   description: 'Latest news, tips, and updates about RedGifs downloader tool',
@@ -37,9 +39,8 @@ interface BlogPageProps {
   }
 }
 
-export default async function BlogPage({ searchParams }: BlogPageProps) {
-  const { page } = await searchParams
-  const currentPage = parseInt(page || '1', 10)
+export default function BlogPage({ searchParams }: BlogPageProps) {
+  const currentPage = parseInt(searchParams?.page || '1', 10)
   const { posts, totalPages, totalPosts } = getPaginatedPosts(currentPage, 6)
 
   return (

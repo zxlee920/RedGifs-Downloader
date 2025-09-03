@@ -1,5 +1,7 @@
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -12,22 +14,66 @@ export default {
       });
     }
 
-    // Handle GET requests with a simple API info response
-    if (request.method === 'GET') {
-      return new Response(JSON.stringify({ 
-        message: 'RedGifs Downloader API',
-        version: '1.0.0',
-        endpoints: {
-          'POST /': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
-          'GET /proxy-download': 'Proxy download file - query params: url, filename'
+    // Handle proxy download requests
+    if (url.pathname === '/proxy-download' && request.method === 'GET') {
+      const fileUrl = url.searchParams.get('url');
+      const filename = url.searchParams.get('filename');
+      
+      if (!fileUrl || !filename) {
+        return new Response(JSON.stringify({ error: 'Missing url or filename parameter' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.status}`);
         }
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
+
+        return new Response(response.body, {
+          headers: {
+            'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: 'Failed to download file' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Handle static file requests
+    if (request.method === 'GET') {
+      try {
+        // Try to serve static files from the built Next.js app
+        const staticResponse = await env.ASSETS.fetch(request);
+        if (staticResponse.status !== 404) {
+          return staticResponse;
+        }
+      } catch (error) {
+        // If ASSETS binding is not available, return API info for root
+        if (url.pathname === '/') {
+          return new Response(JSON.stringify({ 
+            message: 'RedGifs Downloader API',
+            version: '1.0.0',
+            endpoints: {
+              'POST /': 'Download RedGifs video - send JSON with {url: "redgifs_url"}',
+              'GET /proxy-download': 'Proxy download file - query params: url, filename'
+            }
+          }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+      }
     }
 
     // Only handle POST requests for download
