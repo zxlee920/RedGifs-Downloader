@@ -1,6 +1,7 @@
 name = "redgifs-downloader"
 main = "worker.js"
 compatibility_date = "2024-01-01"
+build = { command = "npm run build" }
 
 [assets]
 directory = "./out"
