@@ -243,6 +243,18 @@ export default {
           });
         }
 
+        const debugInfo = {
+          version: '2.1.0',
+          timestamp: Date.now(),
+          logicType: 'mp4-priority',
+          urlProcessing: downloads.map(d => ({
+            type: d.type,
+            quality: d.quality,
+            isM4s: d.url.includes('.m4s'),
+            urlPattern: d.url.substring(0, 50) + '...'
+          }))
+        };
+
         return new Response(JSON.stringify({
           success: true,
           videoId: gif.id,
@@ -251,10 +263,14 @@ export default {
           views: gif.views || 0,
           likes: gif.likes || 0,
           hasAudio: gif.hasAudio || false,
-          downloads: downloads
+          downloads: downloads,
+          debug: debugInfo
         }), {
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
             ...corsHeaders,
           },
         });
