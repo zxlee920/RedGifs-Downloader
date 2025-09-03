@@ -322,7 +322,7 @@ export default function Downloader() {
                               <div className="text-xs text-muted-foreground">{result.size}</div>
                             )}
                           </div>
-                          <Badge className={`${getTypeColor(result.type)} hidden sm:inline-flex`}>
+                          <Badge className={`${getTypeColor(result.type)}`}>
                             {result.type}
                           </Badge>
                         </div>
@@ -440,7 +440,7 @@ https://redgifs.com/watch/example3...`}
                                 <div className="flex items-center gap-2">
                                   {getIcon(result.type)}
                                   <span className="text-sm hidden sm:inline">{result.filename}</span>
-                                  <Badge className={`${getTypeColor(result.type)} hidden sm:inline-flex`} variant="outline">
+                                  <Badge className={`${getTypeColor(result.type)}`} variant="outline">
                                     {result.type}
                                   </Badge>
                                 </div>
