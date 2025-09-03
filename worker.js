@@ -47,8 +47,11 @@ export default {
       }
     }
 
-    // Handle static file requests
-    if (request.method === 'GET') {
+    // Handle POST requests for download API
+    if (request.method === 'POST') {
+      // Continue to download logic below
+    } else if (request.method === 'GET') {
+      // Handle static file requests for GET
       try {
         // Try to serve static files from the built Next.js app
         const staticResponse = await env.ASSETS.fetch(request);
@@ -74,10 +77,11 @@ export default {
           });
         }
       }
-    }
-
-    // Only handle POST requests for download
-    if (request.method !== 'POST') {
+      
+      // If no static file found, return 404
+      return new Response('Not Found', { status: 404 });
+    } else {
+      // Method not allowed for other methods
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
         headers: {
