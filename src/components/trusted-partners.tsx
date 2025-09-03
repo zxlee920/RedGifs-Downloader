@@ -15,30 +15,12 @@ const featuredLinks = [
     name: 'Product Hunt',
     url: 'https://producthunt.com',
     description: 'Discover new products',
-    rel: 'nofollow'
+    rel: '' // 传递权重
   },
   {
     name: 'GitHub',
     url: 'https://github.com',
     description: 'Developer platform',
-    rel: '' // 传递权重
-  },
-  {
-    name: 'Stack Overflow',
-    url: 'https://stackoverflow.com',
-    description: 'Developer community',
-    rel: 'nofollow'
-  },
-  {
-    name: 'Reddit',
-    url: 'https://reddit.com',
-    description: 'Social news aggregation',
-    rel: 'nofollow'
-  },
-  {
-    name: 'Hacker News',
-    url: 'https://news.ycombinator.com',
-    description: 'Tech news community',
     rel: 'nofollow'
   }
 ]
