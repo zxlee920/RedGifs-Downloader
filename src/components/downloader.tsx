@@ -17,13 +17,26 @@ interface DownloadResult {
   filename: string
   quality: string
   size?: string
+  preferred?: boolean
 }
 
-interface ApiDownloadResult {
-  type: 'video' | 'cover' | 'thumb'
-  url: string
-  filename: string
-  size?: string
+interface ApiResponse {
+  success: boolean
+  videoId: string
+  title: string
+  duration: number
+  views: number
+  likes: number
+  hasAudio: boolean
+  width: number
+  height: number
+  tags: string[]
+  username: string
+  verified: boolean
+  published: boolean
+  createDate?: string
+  downloads: DownloadResult[]
+  note?: string
 }
 
 interface BatchResult {
@@ -42,6 +55,7 @@ export default function Downloader() {
   const [batchResults, setBatchResults] = useState<BatchResult[]>([])
   const [error, setError] = useState('')
   const [batchError, setBatchError] = useState('')
+  const [videoInfo, setVideoInfo] = useState<ApiResponse | null>(null)
 
   const handleDownload = async () => {
     if (!url.trim()) {
@@ -57,6 +71,7 @@ export default function Downloader() {
     setIsLoading(true)
     setError('')
     setResults([])
+    setVideoInfo(null)
 
     try {
       const apiUrl = '/api/download'
@@ -76,14 +91,17 @@ export default function Downloader() {
       }
 
       if (data.success && data.downloads) {
-        const formattedResults: DownloadResult[] = data.downloads.map((download: ApiDownloadResult) => ({
-          type: download.type,
-          url: download.url,
-          filename: download.filename,
-          size: download.size || undefined
-        }))
+        // 按优先级排序：preferred > video > cover > thumb
+        const sortedDownloads = [...data.downloads].sort((a, b) => {
+          if (a.preferred && !b.preferred) return -1
+          if (!a.preferred && b.preferred) return 1
+          if (a.type === 'video' && b.type !== 'video') return -1
+          if (a.type !== 'video' && b.type === 'video') return 1
+          return 0
+        })
         
-        setResults(formattedResults)
+        setResults(sortedDownloads)
+        setVideoInfo(data)
       } else {
         throw new Error('No download links found')
       }
@@ -289,6 +307,40 @@ export default function Downloader() {
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-medium">Download links ready!</span>
                 </div>
+                
+                {/* 视频信息展示 */}
+                {videoInfo && (
+                  <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-sm">{videoInfo.title}</h3>
+                      {videoInfo.hasAudio && (
+                        <Badge variant="secondary" className="text-xs">
+                          🔊 Audio
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                      <div>👤 {videoInfo.username}{videoInfo.verified && ' ✓'}</div>
+                      <div>⏱️ {videoInfo.duration}s</div>
+                      <div>👁️ {videoInfo.views.toLocaleString()}</div>
+                      <div>❤️ {videoInfo.likes.toLocaleString()}</div>
+                    </div>
+                    {videoInfo.tags && videoInfo.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {videoInfo.tags.slice(0, 5).map((tag, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            #{tag}
+                          </Badge>
+                        ))}
+                        {videoInfo.tags.length > 5 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{videoInfo.tags.length - 5} more
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex gap-2 md:gap-6 items-start">
                   {/* 左侧封面图预览 */}
                   <div className="flex-shrink-0">
@@ -322,9 +374,16 @@ export default function Downloader() {
                               <div className="text-xs text-muted-foreground">{result.size}</div>
                             )}
                           </div>
-                          <Badge className={`${getTypeColor(result.type)}`}>
-                            {result.type}
-                          </Badge>
+                          <div className="flex gap-1">
+                            <Badge className={`${getTypeColor(result.type)}`}>
+                              {result.quality}
+                            </Badge>
+                            {result.preferred && (
+                              <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">
+                                推荐
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <Button 
                           size="sm" 

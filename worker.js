@@ -76,7 +76,19 @@ export default {
           });
         }
 
-        // Try to scrape RedGifs page first
+        // 使用专业化的RedGifs API客户端
+        const gifData = await redgifsAPI.getGif(videoId);
+        
+        if (gifData && gifData.success) {
+          return new Response(JSON.stringify(gifData), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          });
+        }
+
+        // 如果API失败，尝试网页抓取作为备用方案
         const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
         
         if (scrapedData && scrapedData.videoUrl) {
@@ -109,7 +121,7 @@ export default {
             likes: 0,
             hasAudio: true,
             downloads: downloads,
-            note: 'Real RedGifs content extracted from webpage'
+            note: 'Fallback: content extracted from webpage'
           }), {
             headers: {
               'Content-Type': 'application/json',
@@ -118,101 +130,11 @@ export default {
           });
         }
 
-        // If scraping fails, try API approach
-        const token = await getAuthToken();
-        
-        const apiUrls = [
-          `https://api.redgifs.com/v2/gifs/${videoId}`,
-          `https://api.redgifs.com/v1/gifs/${videoId}`
-        ];
-        
-        let response = null;
-        let data = null;
-        
-        for (const apiUrl of apiUrls) {
-          try {
-            const headers = {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json',
-              'Referer': 'https://redgifs.com/',
-              'Origin': 'https://redgifs.com'
-            };
-            
-            if (token) {
-              headers['Authorization'] = `Bearer ${token}`;
-            }
-            
-            response = await fetch(apiUrl, { headers });
-            
-            if (response.ok) {
-              data = await response.json();
-              break;
-            }
-          } catch (error) {
-            continue;
-          }
-        }
-
-        // Check if we have valid API data
-        if (!response?.ok || !data || !data.gif || !data.gif.urls) {
-          return new Response(JSON.stringify({ 
-            error: 'Unable to fetch video information from RedGifs. The video may be private, deleted, or the URL is incorrect.' 
-          }), {
-            status: 404,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          });
-        }
-
-        const gif = data.gif;
-
-        // Prepare download links
-        const downloads = [];
-        
-        if (gif.urls && (gif.urls.hd || gif.urls.sd)) {
-          downloads.push({
-            type: 'video',
-            url: gif.urls.hd || gif.urls.sd,
-            filename: `${gif.id}_video.mp4`,
-            quality: gif.urls.hd ? 'HD' : 'SD',
-            size: null
-          });
-        }
-        
-        if (gif.urls && gif.urls.poster) {
-          downloads.push({
-            type: 'cover',
-            url: gif.urls.poster,
-            filename: `${gif.id}_cover.jpg`,
-            quality: 'Standard',
-            size: null
-          });
-        }
-
-        if (downloads.length === 0) {
-          return new Response(JSON.stringify({ 
-            error: 'No downloadable content found. The video URLs may be invalid or inaccessible.' 
-          }), {
-            status: 404,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          });
-        }
-
-        return new Response(JSON.stringify({
-          success: true,
-          videoId: gif.id,
-          title: gif.title,
-          duration: gif.duration || 30,
-          views: gif.views || 0,
-          likes: gif.likes || 0,
-          hasAudio: gif.hasAudio || false,
-          downloads: downloads
+        // 如果都失败了，返回错误
+        return new Response(JSON.stringify({ 
+          error: 'Unable to fetch video information from RedGifs. The video may be private, deleted, or the URL is incorrect.' 
         }), {
+          status: 404,
           headers: {
             'Content-Type': 'application/json',
             ...corsHeaders,
@@ -276,7 +198,7 @@ export default {
       }
     }
 
-    // Handle proxy download requests
+    // Handle proxy download requests - 使用专业化RedGifs下载方法
     if (url.pathname === '/proxy-download' && request.method === 'GET') {
       const fileUrl = url.searchParams.get('url');
       const filename = url.searchParams.get('filename');
@@ -284,22 +206,55 @@ export default {
       if (!fileUrl || !filename) {
         return new Response(JSON.stringify({ error: 'Missing url or filename parameter' }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          }
         });
       }
 
       try {
-        const response = await fetch(fileUrl);
+        let response;
+        
+        // 检查是否为RedGifs URL，使用专用下载方法
+        if (fileUrl.includes('redgifs.com') || fileUrl.includes('redgifs')) {
+          response = await redgifsAPI.download(fileUrl, filename);
+        } else {
+          // 非RedGifs URL使用普通方法
+          response = await fetch(fileUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Referer': 'https://redgifs.com/',
+            }
+          });
+        }
+        
         if (!response.ok) {
           throw new Error(`Failed to fetch file: ${response.status}`);
         }
 
+        const responseHeaders = {
+          'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          ...corsHeaders,
+        };
+
+        // 支持Range请求
+        const range = request.headers.get('Range');
+        if (range && response.headers.get('Accept-Ranges')) {
+          responseHeaders['Accept-Ranges'] = response.headers.get('Accept-Ranges');
+          if (response.headers.get('Content-Range')) {
+            responseHeaders['Content-Range'] = response.headers.get('Content-Range');
+          }
+        }
+        
+        if (response.headers.get('Content-Length')) {
+          responseHeaders['Content-Length'] = response.headers.get('Content-Length');
+        }
+
         return new Response(response.body, {
-          headers: {
-            'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-            ...corsHeaders,
-          },
+          status: response.status,
+          headers: responseHeaders,
         });
       } catch (error) {
         return new Response(JSON.stringify({ error: 'Failed to download file' }), {
@@ -364,26 +319,186 @@ export default {
   }
 };
 
-async function getAuthToken() {
-  try {
-    const response = await fetch('https://api.redgifs.com/v2/auth/temporary', {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      return data.token;
-    }
-  } catch (error) {
-    // Ignore auth token errors
+// RedGifs API Client - 基于官方Python库设计
+class RedGifsAPI {
+  constructor() {
+    this.token = null;
+    this.baseURL = 'https://api.redgifs.com';
+    this.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   }
-  return null;
+
+  // 获取临时认证token
+  async login() {
+    try {
+      const response = await fetch(`${this.baseURL}/v2/auth/temporary`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': this.userAgent,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Referer': 'https://redgifs.com/',
+          'Origin': 'https://redgifs.com'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        this.token = data.token;
+        return this.token;
+      }
+    } catch (error) {
+      console.error('Auth token error:', error);
+    }
+    return null;
+  }
+
+  // 获取GIF详细信息
+  async getGif(id) {
+    if (!this.token) {
+      await this.login();
+    }
+
+    const apiUrls = [
+      `${this.baseURL}/v2/gifs/${id}`,
+      `${this.baseURL}/v1/gifs/${id}`
+    ];
+    
+    for (const apiUrl of apiUrls) {
+      try {
+        const headers = {
+          'User-Agent': this.userAgent,
+          'Accept': 'application/json',
+          'Referer': 'https://redgifs.com/',
+          'Origin': 'https://redgifs.com'
+        };
+        
+        if (this.token) {
+          headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        
+        const response = await fetch(apiUrl, { headers });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return this.processGifData(data.gif);
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    return null;
+  }
+
+  // 处理GIF数据，转换为标准格式
+  processGifData(gif) {
+    if (!gif || !gif.urls) return null;
+
+    const downloads = [];
+    const urls = gif.urls;
+
+    // 优先使用embed_url（避免IP泄露）
+    if (urls.embed_url) {
+      downloads.push({
+        type: 'video',
+        url: urls.embed_url,
+        filename: `${gif.id}_embed.mp4`,
+        quality: 'Embed (No IP leak)',
+        size: null,
+        preferred: true
+      });
+    }
+
+    // HD视频
+    if (urls.hd) {
+      downloads.push({
+        type: 'video',
+        url: urls.hd,
+        filename: `${gif.id}_hd.mp4`,
+        quality: 'HD',
+        size: null
+      });
+    }
+
+    // SD视频
+    if (urls.sd) {
+      downloads.push({
+        type: 'video',
+        url: urls.sd,
+        filename: `${gif.id}_sd.mp4`,
+        quality: 'SD',
+        size: null
+      });
+    }
+
+    // 封面图片
+    if (urls.poster) {
+      downloads.push({
+        type: 'cover',
+        url: urls.poster,
+        filename: `${gif.id}_poster.jpg`,
+        quality: 'Poster',
+        size: null
+      });
+    }
+
+    // 缩略图
+    if (urls.thumbnail) {
+      downloads.push({
+        type: 'thumb',
+        url: urls.thumbnail,
+        filename: `${gif.id}_thumb.jpg`,
+        quality: 'Thumbnail',
+        size: null
+      });
+    }
+
+    return {
+      success: true,
+      videoId: gif.id,
+      title: gif.title || `RedGifs ${gif.id}`,
+      duration: gif.duration || 0,
+      views: gif.views || 0,
+      likes: gif.likes || 0,
+      hasAudio: gif.hasAudio || false,
+      width: gif.width || 0,
+      height: gif.height || 0,
+      tags: gif.tags || [],
+      username: gif.username || 'Unknown',
+      verified: gif.verified || false,
+      published: gif.published || true,
+      createDate: gif.createDate || null,
+      downloads: downloads
+    };
+  }
+
+  // 专用下载方法，处理RedGifs的验证
+  async download(url, filename) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': this.userAgent,
+          'Referer': 'https://redgifs.com/',
+          'Origin': 'https://redgifs.com',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
+
+// 全局API实例
+const redgifsAPI = new RedGifsAPI();
 
 async function scrapeRedGifsPage(url, videoId) {
   try {
