@@ -7,12 +7,13 @@ import Footer from '@/components/footer'
 import { siteConfig } from '@/config/site'
 import { getMicrosoftWebmasterMeta } from '@/config/analytics'
 import Analytics from '@/components/analytics';
+import HydrationFix from '@/components/hydration-fix';
 import Script from "next/script";
 
 const inter = Inter({ 
   subsets: ["latin"],
   display: 'swap',
-  preload: false
+  preload: true
 });
 
 export const metadata: Metadata = {
@@ -61,10 +62,16 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="preload" href="/globals.css" as="style" />
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            html { visibility: hidden; }
+            html.hydrated { visibility: visible; }
+          `
+        }} />
         {webmasterMeta && (
           <meta name={webmasterMeta.name} content={webmasterMeta.content} />
         )}
-        
       </head>
       <body className={`${inter.className} antialiased min-h-screen flex flex-col`} suppressHydrationWarning>
         <ThemeProvider
@@ -81,6 +88,7 @@ export default function RootLayout({
         </ThemeProvider>
         
         <Analytics />
+        <HydrationFix />
       </body>
     </html>
   );

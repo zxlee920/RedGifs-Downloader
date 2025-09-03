@@ -15,7 +15,11 @@ export default function Analytics() {
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-MXQBHQHXRK');
+      gtag('config', 'G-MXQBHQHXRK', {
+        cookie_expires: 63072000,
+        cookie_update: true,
+        cookie_flags: 'SameSite=None;Secure'
+      });
     `
     document.head.appendChild(gaConfigScript)
 

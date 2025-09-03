@@ -174,7 +174,7 @@ export default function Downloader() {
   const handleFileDownload = async (fileUrl: string, filename: string) => {
     try {
       // 使用代理下载API来实现真正的文件下载
-      const downloadUrl = `https://redgifs-downloader.kasonleegm.workers.dev/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+      const downloadUrl = `/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
       
       // 创建一个隐藏的链接来触发下载
       const link = document.createElement('a')
@@ -295,7 +295,7 @@ export default function Downloader() {
                     {results.find(r => r.type === 'cover') && (
                       <div className="w-20 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
                         <Image
-                          src={`https://redgifs-downloader.kasonleegm.workers.dev/proxy-image?url=${encodeURIComponent(results.find(r => r.type === 'cover')?.url || '')}`}
+                          src={`/proxy-image?url=${encodeURIComponent(results.find(r => r.type === 'cover')?.url || '')}`}
                           alt="Cover Preview"
                           className="w-full h-full object-cover"
                           width={320}
@@ -418,7 +418,7 @@ https://redgifs.com/watch/example3...`}
                             {batchResult.results.find(r => r.type === 'cover') && (
                               <div className="w-14 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
                                 <Image
-                                  src={`https://redgifs-downloader.kasonleegm.workers.dev/proxy-image?url=${encodeURIComponent(batchResult.results.find(r => r.type === 'cover')?.url || '')}`}
+                                  src={`/proxy-image?url=${encodeURIComponent(batchResult.results.find(r => r.type === 'cover')?.url || '')}`}
                                   alt="Cover Preview"
                                   className="w-full h-full object-cover"
                                   width={320}
