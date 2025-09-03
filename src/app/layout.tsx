@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://redgifsdownloader.top'),
   title: "RedGifs Downloader – Bulk download HD videos in seconds",
   description: "Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.",
   authors: [{ name: "RedGifs Downloader Team" }],
