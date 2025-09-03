@@ -1,7 +1,7 @@
 // 网站统一配置
 export const siteConfig = {
   // 主域名配置 - 只需要修改这里就能更新所有页面的域名
-  baseUrl: 'https://redgifs-downloader.kasonleegm.workers.dev',
+  baseUrl: 'https://redgifsdownloader.top',
   
   // 网站基本信息
   name: 'RedGifs Downloader',

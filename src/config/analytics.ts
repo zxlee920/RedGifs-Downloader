@@ -18,6 +18,7 @@ export const analyticsConfig = {
     enabled: true,
   },
   
+  
   // 生产环境检查函数
   isProduction: () => {
     return process.env.NODE_ENV === 'production'
