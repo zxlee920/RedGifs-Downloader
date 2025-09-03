@@ -295,7 +295,7 @@ export default function Downloader() {
                     {results.find(r => r.type === 'cover') && (
                       <div className="w-20 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
                         <Image
-                          src={results.find(r => r.type === 'cover')?.url || ''}
+                          src={`https://redgifs-downloader.kasonleegm.workers.dev/proxy-image?url=${encodeURIComponent(results.find(r => r.type === 'cover')?.url || '')}`}
                           alt="Cover Preview"
                           className="w-full h-full object-cover"
                           width={320}
@@ -418,7 +418,7 @@ https://redgifs.com/watch/example3...`}
                             {batchResult.results.find(r => r.type === 'cover') && (
                               <div className="w-14 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
                                 <Image
-                                  src={batchResult.results.find(r => r.type === 'cover')?.url || ''}
+                                  src={`https://redgifs-downloader.kasonleegm.workers.dev/proxy-image?url=${encodeURIComponent(batchResult.results.find(r => r.type === 'cover')?.url || '')}`}
                                   alt="Cover Preview"
                                   className="w-full h-full object-cover"
                                   width={320}

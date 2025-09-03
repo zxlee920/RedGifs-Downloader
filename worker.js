@@ -232,6 +232,50 @@ export default {
       }
     }
 
+    // Handle image proxy requests
+    if (url.pathname === '/proxy-image' && request.method === 'GET') {
+      const imageUrl = url.searchParams.get('url');
+      
+      if (!imageUrl) {
+        return new Response(JSON.stringify({ error: 'Missing image URL' }), {
+          status: 400,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          }
+        });
+      }
+
+      try {
+        const response = await fetch(imageUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': 'https://redgifs.com/',
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+
+        return new Response(response.body, {
+          headers: {
+            'Content-Type': response.headers.get('Content-Type') || 'image/jpeg',
+            'Cache-Control': 'public, max-age=3600',
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: 'Failed to load image' }), {
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          }
+        });
+      }
+    }
+
     // Handle proxy download requests
     if (url.pathname === '/proxy-download' && request.method === 'GET') {
       const fileUrl = url.searchParams.get('url');
