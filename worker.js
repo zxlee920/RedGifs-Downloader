@@ -171,12 +171,45 @@ export default {
         // Prepare download links
         const downloads = [];
         
-        if (gif.urls && (gif.urls.hd || gif.urls.sd)) {
+        // 优先使用无水印有声音的视频源
+        let primaryVideoUrl = null;
+        let primaryVideoQuality = 'SD';
+        
+        // 根据RedGifs官方文档选择最佳视频源
+        if (gif.urls) {
+          // 1. 优先使用embed_url - 官方推荐的无限制加载方式
+          if (gif.urls.embed_url) {
+            primaryVideoUrl = gif.urls.embed_url;
+            primaryVideoQuality = 'Embed';
+          }
+          // 2. 使用file_url - 直接文件链接
+          else if (gif.urls.file_url) {
+            primaryVideoUrl = gif.urls.file_url;
+            primaryVideoQuality = 'File';
+          }
+          // 3. web_url - 网站URL（无水印）
+          else if (gif.urls.web_url) {
+            primaryVideoUrl = gif.urls.web_url;
+            primaryVideoQuality = 'Web';
+          }
+          // 4. HD质量（可能有水印但质量好）
+          else if (gif.urls.hd) {
+            primaryVideoUrl = gif.urls.hd;
+            primaryVideoQuality = 'HD';
+          }
+          // 5. SD质量作为备选
+          else if (gif.urls.sd) {
+            primaryVideoUrl = gif.urls.sd;
+            primaryVideoQuality = 'SD';
+          }
+        }
+        
+        if (primaryVideoUrl) {
           downloads.push({
             type: 'video',
-            url: gif.urls.hd || gif.urls.sd,
+            url: primaryVideoUrl,
             filename: `${gif.id}_video.mp4`,
-            quality: gif.urls.hd ? 'HD' : 'SD',
+            quality: primaryVideoQuality,
             size: null
           });
         }
