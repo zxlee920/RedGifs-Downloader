@@ -76,49 +76,10 @@ export default {
           });
         }
 
-        // Try to scrape RedGifs page first
-        const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
-        
-        if (scrapedData && scrapedData.videoUrl) {
-          const downloads = [
-            {
-              type: 'video',
-              url: scrapedData.videoUrl,
-              filename: `${videoId}_video.mp4`,
-              quality: 'HD',
-              size: null
-            }
-          ];
-          
-          if (scrapedData.posterUrl) {
-            downloads.push({
-              type: 'cover',
-              url: scrapedData.posterUrl,
-              filename: `${videoId}_cover.jpg`,
-              quality: 'Standard',
-              size: null
-            });
-          }
+        // Try to scrape RedGifs page first (fallback if API fails)
+        // const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
 
-          return new Response(JSON.stringify({
-            success: true,
-            videoId: videoId,
-            title: `RedGifs Video ${videoId}`,
-            duration: 30,
-            views: 0,
-            likes: 0,
-            hasAudio: true,
-            downloads: downloads,
-            note: 'Real RedGifs content extracted from webpage'
-          }), {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          });
-        }
-
-        // If scraping fails, try API approach
+        // API approach
         const token = await getAuthToken();
         
         const apiUrls = [
@@ -158,6 +119,54 @@ export default {
             }
           } catch (error) {
             continue;
+          }
+        }
+        
+        // If API fails, try scraping as fallback
+        if (!response?.ok || !data || !data.gif || !data.gif.urls) {
+          const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
+          
+          if (scrapedData && scrapedData.videoUrl) {
+            const downloads = [
+              {
+                type: 'video',
+                url: scrapedData.videoUrl,
+                filename: `${videoId}_video.mp4`,
+                quality: 'HD-Scraped',
+                size: null
+              }
+            ];
+            
+            if (scrapedData.posterUrl) {
+              downloads.push({
+                type: 'cover',
+                url: scrapedData.posterUrl,
+                filename: `${videoId}_cover.jpg`,
+                quality: 'Standard',
+                size: null
+              });
+            }
+
+            return new Response(JSON.stringify({
+              success: true,
+              videoId: videoId,
+              title: `RedGifs Video ${videoId}`,
+              duration: 30,
+              views: 0,
+              likes: 0,
+              hasAudio: true,
+              downloads: downloads,
+              debug: {
+                version: '2.7.0',
+                method: 'webpage-scraping',
+                note: 'API failed, used webpage scraping'
+              }
+            }), {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            });
           }
         }
 
@@ -279,12 +288,13 @@ export default {
         }
 
         const debugInfo = {
-          version: '2.6.0',
+          version: '2.7.0',
           timestamp: Date.now(),
-          logicType: 'web-embed-url-priority',
+          logicType: 'api-with-scraping-fallback',
           hasAudio: gif.hasAudio || false,
           audioStatus: gif.hasAudio ? 'HAS_AUDIO' : 'NO_AUDIO',
           availableUrlTypes: Object.keys(gif.urls || {}),
+          tokenStatus: token ? 'AVAILABLE' : 'MISSING',
           rawApiResponse: {
             id: gif.id,
             hasAudio: gif.hasAudio,
@@ -493,14 +503,9 @@ async function scrapeRedGifsPage(url, videoId) {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Referer': 'https://redgifs.com/',
       }
     });
 
@@ -510,56 +515,28 @@ async function scrapeRedGifsPage(url, videoId) {
 
     const html = await response.text();
     
-    // Try multiple patterns to extract video URLs
-    const videoPatterns = [
-      // HD video URLs
-      /"(https:\/\/[^"]*\.mp4[^"]*)"/g,
-      // Alternative video patterns
-      /'(https:\/\/[^']*\.mp4[^']*)'/g,
-      // JSON embedded video URLs
-      /"videoUrl"\s*:\s*"(https:\/\/[^"]*\.mp4[^"]*)"/g,
-      /"hd"\s*:\s*"(https:\/\/[^"]*\.mp4[^"]*)"/g,
-      /"sd"\s*:\s*"(https:\/\/[^"]*\.mp4[^"]*)"/g,
-      // Direct file URLs
-      /https:\/\/[\w.-]+\.redgifs\.com\/[\w\/-]+\.mp4/g
-    ];
+    // 使用成功项目的正则表达式 - 直接提取真实的API文件URL
+    const CONTENT_RE = /https:\/\/api\.redgifs\.com\/v2\/gifs\/[\w-]+\/files\/[\w-]+\.mp4/g;
+    const match = html.match(CONTENT_RE);
     
-    const posterPatterns = [
-      /"(https:\/\/[^"]*poster[^"]*\.(jpg|jpeg|png)[^"]*)"/g,
-      /"(https:\/\/[^"]*thumb[^"]*\.(jpg|jpeg|png)[^"]*)"/g,
-      /"posterUrl"\s*:\s*"(https:\/\/[^"]*\.(jpg|jpeg|png)[^"]*)"/g
-    ];
-
-    let videoUrl = null;
-    let posterUrl = null;
-
-    // Try to find video URL
-    for (const pattern of videoPatterns) {
-      const matches = html.matchAll(pattern);
-      for (const match of matches) {
-        const url = match[1] || match[0];
-        if (url && url.includes('.mp4') && !url.includes('poster') && !url.includes('thumb')) {
-          videoUrl = url;
+    if (match && match[0]) {
+      const videoUrl = match[0];
+      
+      // 尝试提取封面图
+      const posterPatterns = [
+        /https:\/\/[\w.-]+\.redgifs\.com\/[\w\/-]+-poster\.jpg/g,
+        /https:\/\/[\w.-]+\.redgifs\.com\/[\w\/-]+\.jpg/g
+      ];
+      
+      let posterUrl = null;
+      for (const pattern of posterPatterns) {
+        const posterMatch = html.match(pattern);
+        if (posterMatch && posterMatch[0]) {
+          posterUrl = posterMatch[0];
           break;
         }
       }
-      if (videoUrl) break;
-    }
-
-    // Try to find poster URL
-    for (const pattern of posterPatterns) {
-      const matches = html.matchAll(pattern);
-      for (const match of matches) {
-        const url = match[1] || match[0];
-        if (url && (url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png'))) {
-          posterUrl = url;
-          break;
-        }
-      }
-      if (posterUrl) break;
-    }
-
-    if (videoUrl) {
+      
       return {
         videoUrl: videoUrl,
         posterUrl: posterUrl
