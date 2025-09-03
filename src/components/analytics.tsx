@@ -5,6 +5,9 @@ import Script from 'next/script'
 export default function Analytics() {
   return (
     <>
+      {/* Microsoft Webmaster Tool */}
+      <meta name="msvalidate.01" content="69D16751CFC6C5AE084CDA799DD24432" />
+      
       {/* Google Analytics */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-YM0P7YDGWF"

@@ -4,10 +4,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import Navigation from '@/components/navigation'
 import Footer from '@/components/footer'
 import { siteConfig } from '@/config/site'
-import { getMicrosoftWebmasterMeta } from '@/config/analytics'
 import Analytics from '@/components/analytics';
 import HydrationFix from '@/components/hydration-fix';
-import Script from "next/script";
 
 
 export const metadata: Metadata = {
@@ -26,23 +24,6 @@ export const metadata: Metadata = {
     title: siteConfig.title,
     description: siteConfig.description,
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  // verification: {
-  //   google: 'your-google-verification-code', // 需要时添加
-  // },
-  other: {
-    'msvalidate.01': getMicrosoftWebmasterMeta()?.content || '',
-  },
 };
 
 export default function RootLayout({
@@ -50,7 +31,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const webmasterMeta = getMicrosoftWebmasterMeta()
 
   return (
     <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
@@ -62,10 +42,6 @@ export default function RootLayout({
             html.hydrated { visibility: visible; }
           `
         }} />
-        {webmasterMeta && (
-          <meta name={webmasterMeta.name} content={webmasterMeta.content} />
-        )}
-        
         {/* Analytics Scripts in Head */}
         <Analytics />
       </head>
