@@ -133,9 +133,17 @@ export default {
           try {
             const headers = {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json',
-              'Referer': 'https://redgifs.com/',
-              'Origin': 'https://redgifs.com'
+              'Accept': 'application/json, text/plain, */*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Accept-Encoding': 'gzip, deflate, br',
+              'Referer': 'https://www.redgifs.com/',
+              'Origin': 'https://www.redgifs.com',
+              'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+              'Sec-Ch-Ua-Mobile': '?0',
+              'Sec-Ch-Ua-Platform': '"Windows"',
+              'Sec-Fetch-Dest': 'empty',
+              'Sec-Fetch-Mode': 'cors',
+              'Sec-Fetch-Site': 'same-site'
             };
             
             if (token) {
@@ -175,18 +183,63 @@ export default {
         let primaryVideoUrl = null;
         let primaryVideoQuality = 'SD';
         
-        // 仿照yt-dlp实现，提供多种格式选择
-        const formats = ['hd', 'sd', 'gif'];
-        const qualityPriority = { 'hd': 3, 'sd': 2, 'gif': 1 };
-        
-        for (const format of formats) {
-          if (gif.urls && gif.urls[format]) {
+        // 优先使用无水印的web_url和embed_url
+        if (gif.urls) {
+          // 优先级1: web_url (无水印，有音频)
+          if (gif.urls.web_url) {
             downloads.push({
               type: 'video',
-              url: gif.urls[format],
-              filename: `${gif.id}_${format}.mp4`,
-              quality: format.toUpperCase(),
-              priority: qualityPriority[format],
+              url: gif.urls.web_url,
+              filename: `${gif.id}_web.mp4`,
+              quality: 'WEB-NoWatermark',
+              priority: 5,
+              size: null
+            });
+          }
+          
+          // 优先级2: embed_url (无水印，有音频)
+          if (gif.urls.embed_url) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.embed_url,
+              filename: `${gif.id}_embed.mp4`,
+              quality: 'EMBED-NoWatermark',
+              priority: 4,
+              size: null
+            });
+          }
+          
+          // 优先级3: file_url (原始文件)
+          if (gif.urls.file_url) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.file_url,
+              filename: `${gif.id}_file.mp4`,
+              quality: 'FILE-Original',
+              priority: 3,
+              size: null
+            });
+          }
+          
+          // 备选: HD和SD (可能有水印)
+          if (gif.urls.hd) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.hd,
+              filename: `${gif.id}_hd.mp4`,
+              quality: 'HD',
+              priority: 2,
+              size: null
+            });
+          }
+          
+          if (gif.urls.sd) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.sd,
+              filename: `${gif.id}_sd.mp4`,
+              quality: 'SD',
+              priority: 1,
               size: null
             });
           }
@@ -226,17 +279,27 @@ export default {
         }
 
         const debugInfo = {
-          version: '2.4.0',
+          version: '2.6.0',
           timestamp: Date.now(),
-          logicType: 'yt-dlp-multi-format',
-          availableFormats: formats.filter(f => gif.urls && gif.urls[f]),
+          logicType: 'web-embed-url-priority',
+          hasAudio: gif.hasAudio || false,
+          audioStatus: gif.hasAudio ? 'HAS_AUDIO' : 'NO_AUDIO',
+          availableUrlTypes: Object.keys(gif.urls || {}),
+          rawApiResponse: {
+            id: gif.id,
+            hasAudio: gif.hasAudio,
+            duration: gif.duration,
+            width: gif.width,
+            height: gif.height,
+            urls: Object.keys(gif.urls || {})
+          },
           urlProcessing: downloads.map(d => ({
             type: d.type,
             quality: d.quality,
             priority: d.priority || 0,
-            isM4s: d.url.includes('.m4s'),
-            hasSignature: d.url.includes('?'),
-            urlPattern: d.url.substring(0, 50) + '...'
+            isM4s: d.url && d.url.includes('.m4s'),
+            hasSignature: d.url && d.url.includes('?'),
+            urlPattern: d.url ? d.url.substring(0, 50) + '...' : 'N/A'
           }))
         };
 
