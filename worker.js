@@ -25,6 +25,162 @@ export default {
         headers: corsHeaders,
       });
     }
+
+    // Handle POST requests for download API - HIGHEST PRIORITY
+    if (request.method === 'POST') {
+      console.log('POST request detected, path:', url.pathname);
+      
+      if (url.pathname === '/' || url.pathname === '/api/download' || url.pathname.startsWith('/api/download')) {
+        console.log('POST request matched, processing download API');
+        try {
+          const requestBody = await request.text();
+          console.log('Request body:', requestBody);
+          
+          const { url: videoUrl } = JSON.parse(requestBody);
+
+          if (!videoUrl || !videoUrl.includes('redgifs.com')) {
+            return new Response(JSON.stringify({ error: 'Invalid RedGifs URL' }), {
+              status: 400,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            });
+          }
+
+          // Extract video ID from URL
+          const urlPatterns = [
+            /redgifs\.com\/watch\/([a-zA-Z0-9]+)/,
+            /redgifs\.com\/gifs\/detail\/([a-zA-Z0-9]+)/,
+            /redgifs\.com\/(?:watch\/)?([a-zA-Z0-9]+)$/
+          ];
+          
+          let videoId = null;
+          for (const pattern of urlPatterns) {
+            const match = videoUrl.match(pattern);
+            if (match) {
+              videoId = match[1];
+              break;
+            }
+          }
+          
+          if (!videoId) {
+            return new Response(JSON.stringify({ 
+              error: 'Could not extract video ID from URL. Please check the URL format.' 
+            }), {
+              status: 400,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            });
+          }
+
+          // 使用专业化的RedGifs API客户端
+          const gifData = await redgifsAPI.getGif(videoId);
+          
+          if (gifData && gifData.success) {
+            return new Response(JSON.stringify(gifData), {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            });
+          }
+
+          // 如果API失败，尝试网页抓取作为备用方案
+          console.log('API failed, trying web scraping for:', videoUrl);
+          const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
+          console.log('Scraping result:', scrapedData);
+          
+          if (scrapedData && (scrapedData.hlsUrl || scrapedData.videoUrl)) {
+            const downloads = [];
+            
+            // 优先添加HLS链接（有音频，无水印）
+            if (scrapedData.hlsUrl) {
+              downloads.push({
+                type: 'video',
+                url: scrapedData.hlsUrl,
+                filename: `${videoId}.m3u8`,
+                quality: 'HLS (Audio + No Watermark)',
+                size: null,
+                preferred: true
+              });
+            }
+            
+            // 添加MP4链接作为备用
+            if (scrapedData.videoUrl) {
+              downloads.push({
+                type: 'video',
+                url: scrapedData.videoUrl,
+                filename: `${videoId}_video.mp4`,
+                quality: 'HD (May have watermark)',
+                size: null
+              });
+            }
+            
+            if (scrapedData.posterUrl) {
+              downloads.push({
+                type: 'cover',
+                url: scrapedData.posterUrl,
+                filename: `${videoId}_cover.jpg`,
+                quality: 'Standard',
+                size: null
+              });
+            }
+
+            return new Response(JSON.stringify({
+              success: true,
+              videoId: videoId,
+              title: `RedGifs Video ${videoId}`,
+              duration: 30,
+              views: 0,
+              likes: 0,
+              hasAudio: scrapedData.hlsUrl ? true : false,
+              downloads: downloads,
+              note: 'Fallback: content extracted from webpage'
+            }), {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders,
+              },
+            });
+          }
+
+          // 如果都失败了，返回错误
+          return new Response(JSON.stringify({ 
+            error: 'Unable to fetch video information from RedGifs. The video may be private, deleted, or the URL is incorrect.' 
+          }), {
+            status: 404,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          });
+
+        } catch (error) {
+          console.error('POST request error:', error);
+          return new Response(JSON.stringify({ 
+            error: 'Internal server error. Please try again later.' 
+          }), {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          });
+        }
+      } else {
+        console.log('POST request path not matched:', url.pathname);
+        return new Response(JSON.stringify({ error: 'Invalid endpoint' }), {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      }
+    }
     
     // Simple test endpoint
     if (request.method === 'GET' && url.pathname === '/test') {
