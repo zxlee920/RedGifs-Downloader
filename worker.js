@@ -175,32 +175,17 @@ export default {
         let primaryVideoUrl = null;
         let primaryVideoQuality = 'SD';
         
-        // 多种策略获取最佳视频源
+        // 获取有音频的完整视频文件
         if (gif.urls) {
-          // 策略1: 尝试构造无水印的直接下载链接
+          // 策略1: 直接使用原始HD链接（保留所有参数，确保音频）
           if (gif.urls.hd) {
-            // 移除签名参数，获取原始文件
-            let cleanUrl = gif.urls.hd.split('?')[0];
-            // 确保是mp4格式
-            if (cleanUrl.includes('.m4s')) {
-              cleanUrl = cleanUrl.replace(/\.m4s$/, '.mp4');
-            }
-            primaryVideoUrl = cleanUrl;
-            primaryVideoQuality = 'HD-Clean';
-          }
-          // 策略2: 使用原始HD链接
-          else if (gif.urls.hd) {
             primaryVideoUrl = gif.urls.hd;
-            primaryVideoQuality = 'HD';
+            primaryVideoQuality = 'HD-Audio';
           }
-          // 策略3: SD备选
+          // 策略2: SD备选（保留原始链接）
           else if (gif.urls.sd) {
-            let cleanUrl = gif.urls.sd.split('?')[0];
-            if (cleanUrl.includes('.m4s')) {
-              cleanUrl = cleanUrl.replace(/\.m4s$/, '.mp4');
-            }
-            primaryVideoUrl = cleanUrl;
-            primaryVideoQuality = 'SD-Clean';
+            primaryVideoUrl = gif.urls.sd;
+            primaryVideoQuality = 'SD-Audio';
           }
         }
         
@@ -248,14 +233,15 @@ export default {
         }
 
         const debugInfo = {
-          version: '2.2.0',
+          version: '2.3.0',
           timestamp: Date.now(),
-          logicType: 'clean-url-strategy',
+          logicType: 'preserve-audio-strategy',
           urlProcessing: downloads.map(d => ({
             type: d.type,
             quality: d.quality,
             isM4s: d.url.includes('.m4s'),
             hasSignature: d.url.includes('?'),
+            preservedOriginal: true,
             urlPattern: d.url.substring(0, 50) + '...'
           }))
         };
