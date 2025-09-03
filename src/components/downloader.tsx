@@ -8,9 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { Download, Loader2, CheckCircle, AlertCircle, Image, Video, FileImage, List } from 'lucide-react'
+import { Download, Loader2, CheckCircle, AlertCircle, Video, FileImage, List } from 'lucide-react'
+import Image from 'next/image'
 
 interface DownloadResult {
+  type: 'video' | 'cover'
+  url: string
+  filename: string
+  size?: string
+}
+
+interface ApiDownloadResult {
   type: 'video' | 'cover'
   url: string
   filename: string
@@ -65,7 +73,7 @@ export default function Downloader() {
       }
 
       if (data.success && data.downloads) {
-        const formattedResults: DownloadResult[] = data.downloads.map((download: any) => ({
+        const formattedResults: DownloadResult[] = data.downloads.map((download: ApiDownloadResult) => ({
           type: download.type,
           url: download.url,
           filename: download.filename,
@@ -142,7 +150,7 @@ export default function Downloader() {
               error: data.error || 'Failed to process URL'
             }
           }
-        } catch (err) {
+        } catch {
           results[resultIndex] = {
             ...results[resultIndex],
             status: 'error',
@@ -282,16 +290,13 @@ export default function Downloader() {
                   <div className="flex-shrink-0">
                     {results.find(r => r.type === 'cover') && (
                       <div className="w-20 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
-                        <img 
-                          src={results.find(r => r.type === 'cover')?.url} 
+                        <Image
+                          src={results.find(r => r.type === 'cover')?.url || ''}
                           alt="Cover Preview"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.currentTarget as HTMLImageElement;
-                            const fallback = target.nextElementSibling as HTMLElement;
-                            target.style.display = 'none';
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
+                          width={320}
+                          height={180}
+                          unoptimized
                         />
                         <div className="w-full h-full flex-col items-center justify-center text-muted-foreground text-xs" style={{display: 'none'}}>
                           <FileImage className="h-6 w-6 mb-1" />
@@ -408,20 +413,17 @@ https://redgifs.com/watch/example3...`}
                           <div className="flex-shrink-0">
                             {batchResult.results.find(r => r.type === 'cover') && (
                               <div className="w-14 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
-                                <img 
-                                  src={batchResult.results.find(r => r.type === 'cover')?.url} 
+                                <Image
+                                  src={batchResult.results.find(r => r.type === 'cover')?.url || ''}
                                   alt="Cover Preview"
                                   className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const target = e.currentTarget as HTMLImageElement;
-                                    const fallback = target.nextElementSibling as HTMLElement;
-                                    target.style.display = 'none';
-                                    if (fallback) fallback.style.display = 'flex';
-                                  }}
+                                  width={320}
+                                  height={180}
+                                  unoptimized
                                 />
                                 <div className="w-full h-full flex-col items-center justify-center text-muted-foreground text-xs" style={{display: 'none'}}>
                                   <FileImage className="h-3 w-3 mb-1" />
-                                  <span>封面</span>
+                                  <span>Cover</span>
                                 </div>
                               </div>
                             )}

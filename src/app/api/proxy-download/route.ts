@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // 创建下载响应
     const headers = new Headers({
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename=\"${filename}\"`,
       'Cache-Control': 'no-cache',
     })
 

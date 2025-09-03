@@ -9,10 +9,10 @@ import { Calendar, Clock, Tag, ArrowRight } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'RedGifs Downloader – Bulk download HD videos in seconds',
-  description: 'Stop wasting time — download RedGifs HD videos and cover images in seconds with our free online tool.',
+  description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
   openGraph: {
     title: 'RedGifs Downloader – Bulk download HD videos in seconds',
-    description: 'Stop wasting time — download RedGifs HD videos and cover images in seconds with our free online tool.',
+    description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
     type: 'website',
     url: 'https://redgifsdownloader.top',
     siteName: 'RedGifs Downloader',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'RedGifs Downloader – Bulk download HD videos in seconds',
-    description: 'Stop wasting time — download RedGifs HD videos and cover images in seconds with our free online tool.',
+    description: 'Stop wasting time &mdash; download RedGifs HD videos and cover images in seconds with our free online tool.',
     images: ['/og.jpg'],
   },
   robots: {

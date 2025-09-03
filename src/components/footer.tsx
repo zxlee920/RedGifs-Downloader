@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Separator } from '@/components/ui/separator'
-import { Download, Github, Twitter } from 'lucide-react'
+import Image from 'next/image'
 
 export default function Footer() {
   return (
@@ -10,7 +10,7 @@ export default function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-            <img src="/lightning-logo.svg?v=1" alt="Lightning Logo" className="h-6 w-6" />
+            <Image src="/lightning-logo.svg?v=1" alt="Lightning Logo" width={24} height={24} className="h-6 w-6" />
               <span className="font-bold text-lg">RedGifs Downloader</span>
             </div>
             <p className="text-sm text-muted-foreground">

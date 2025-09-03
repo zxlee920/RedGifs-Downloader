@@ -185,7 +185,8 @@ export function getRelatedPosts(currentPostId: string, limit: number = 3): BlogP
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit)
 
-  return relatedPosts.map(({ similarity, ...post }) => post)
+  // 使用rest操作符移除similarity属性，同时保留其他所有属性
+  return relatedPosts.map(({ similarity, ...post }) => post) // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 // 根据标签筛选文章

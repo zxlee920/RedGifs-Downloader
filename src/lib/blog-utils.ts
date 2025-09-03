@@ -1,6 +1,19 @@
 import fs from 'fs'
 import path from 'path'
 
+// 定义博客文章索引条目类型
+interface BlogPostIndex {
+  id: string
+  title: string
+  excerpt: string
+  author: string
+  publishedAt: string
+  updatedAt: string
+  tags: string[]
+  featured: boolean
+  readTime: number
+}
+
 // 添加新文章的工具函数
 export async function addNewPost(postData: {
   id: string
@@ -33,7 +46,7 @@ export async function addNewPost(postData: {
   
   // 添加到索引并按日期排序
   currentIndex.unshift(newIndexEntry)
-  currentIndex.sort((a: any, b: any) => 
+  currentIndex.sort((a: BlogPostIndex, b: BlogPostIndex) => 
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
   
@@ -61,7 +74,7 @@ export async function updatePost(id: string, updates: Partial<{
   
   // 更新索引
   const currentIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'))
-  const postIndex = currentIndex.findIndex((post: any) => post.id === id)
+  const postIndex = currentIndex.findIndex((post: BlogPostIndex) => post.id === id)
   
   if (postIndex === -1) {
     throw new Error(`文章 ${id} 不存在`)
@@ -91,7 +104,7 @@ export async function deletePost(id: string) {
   
   // 从索引中移除
   const currentIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'))
-  const filteredIndex = currentIndex.filter((post: any) => post.id !== id)
+  const filteredIndex = currentIndex.filter((post: BlogPostIndex) => post.id !== id)
   
   fs.writeFileSync(indexPath, JSON.stringify(filteredIndex, null, 2))
   
@@ -144,7 +157,7 @@ export async function batchImportPosts(posts: Array<{
     }
     
     // 检查是否已存在
-    const existingIndex = currentIndex.findIndex((p: any) => p.id === post.id)
+    const existingIndex = currentIndex.findIndex((p: BlogPostIndex) => p.id === post.id)
     if (existingIndex === -1) {
       currentIndex.push(indexEntry)
     } else {
@@ -157,7 +170,7 @@ export async function batchImportPosts(posts: Array<{
   }
   
   // 按日期排序并写入索引
-  currentIndex.sort((a: any, b: any) => 
+  currentIndex.sort((a: BlogPostIndex, b: BlogPostIndex) => 
     new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
   

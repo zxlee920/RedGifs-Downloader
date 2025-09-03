@@ -89,7 +89,7 @@ export default function FAQPage() {
           <AccordionItem value="item-2">
             <AccordionTrigger className="text-lg">Is it safe to use this downloader?</AccordionTrigger>
             <AccordionContent className="text-base">
-              Yes, our downloader is completely safe. We don't store any videos on our servers - everything is processed 
+              Yes, our downloader is completely safe. We don&apos;t store any videos on our servers - everything is processed 
               client-side and downloads are direct from RedGifs servers.
             </AccordionContent>
           </AccordionItem>
@@ -105,7 +105,7 @@ export default function FAQPage() {
           <AccordionItem value="item-5">
             <AccordionTrigger className="text-lg">Is there a limit to how many videos I can download?</AccordionTrigger>
             <AccordionContent className="text-base">
-              There are no artificial limits imposed by our tool. However, please respect RedGifs' terms of service 
+              There are no artificial limits imposed by our tool. However, please respect RedGifs&apos; terms of service 
               and use the downloader responsibly.
             </AccordionContent>
           </AccordionItem>
@@ -113,14 +113,14 @@ export default function FAQPage() {
           <AccordionItem value="item-4">
             <AccordionTrigger className="text-lg">Do you support extensions and macOS/Windows apps?</AccordionTrigger>
             <AccordionContent className="text-base">
-              Not currently, but we're definitely planning to support them in the future. Stay tuned for updates!
+              Not currently, but we&apos;re definitely planning to support them in the future. Stay tuned for updates!
             </AccordionContent>
           </AccordionItem>
           
           <AccordionItem value="item-6">
             <AccordionTrigger className="text-lg">Do you support bulk downloads?</AccordionTrigger>
             <AccordionContent className="text-base">
-              Yes, we fully support bulk downloads! Simply switch to the "Batch Download" tab on the homepage to download and preview multiple videos at once.
+              Yes, we fully support bulk downloads! Simply switch to the &quot;Batch Download&quot; tab on the homepage to download and preview multiple videos at once.
             </AccordionContent>
           </AccordionItem>
         </Accordion>

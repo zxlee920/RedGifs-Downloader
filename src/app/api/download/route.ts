@@ -1,31 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-interface RedGifsResponse {
-  gif: {
-    id: string
-    createDate: number
-    hasAudio: boolean
-    width: number
-    height: number
-    likes: number
-    tags: string[]
-    verified: boolean
-    views: number
-    duration: number
-    published: boolean
-    urls: {
-      sd: string
-      hd: string
-      poster: string
-      thumbnail: string
-      vthumbnail: string
-    }
-    userName: string
-    type: number
-    avgColor: string
-  }
-}
-
 async function getAuthToken() {
   try {
     const response = await fetch('https://api.redgifs.com/v2/auth/temporary', {
@@ -47,7 +21,7 @@ async function getAuthToken() {
   return null
 }
 
-async function scrapeRedGifsPage(url: string, videoId: string) {
+async function scrapeRedGifsPage(url: string) {
   try {
     const response = await fetch(url, {
       headers: {
@@ -121,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // 首先尝试网页抓取获取真实数据
     console.log(`Attempting to scrape RedGifs page for video ID: ${videoId}`)
-    const scrapedData = await scrapeRedGifsPage(url, videoId)
+    const scrapedData = await scrapeRedGifsPage(url)
     
     if (scrapedData && scrapedData.videoUrl) {
       console.log('Successfully scraped RedGifs data')

@@ -113,13 +113,13 @@ export default function PrivacyPage() {
             <ul className="list-disc list-inside mb-4 space-y-2">
               <li><strong>Anonymity:</strong> Use our service without providing personal information</li>
               <li><strong>No Tracking:</strong> We do not build profiles or track your behavior</li>
-              <li><strong>Data Portability:</strong> Not applicable as we don't store personal data</li>
-              <li><strong>Right to Deletion:</strong> Not applicable as we don't retain personal data</li>
+              <li><strong>Data Portability:</strong> Not applicable as we don&apos;t store personal data</li>
+              <li><strong>Right to Deletion:</strong> Not applicable as we don&apos;t retain personal data</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">7. Children's Privacy</h2>
+            <h2 className="text-2xl font-semibold mb-4">7. Children&apos;s Privacy</h2>
             <p className="mb-4 leading-relaxed">
               Our service is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us.
             </p>

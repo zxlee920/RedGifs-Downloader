@@ -1,15 +1,14 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, Clock, Tag, User } from 'lucide-react'
+import { Calendar, Clock, Tag, User } from 'lucide-react'
 import Breadcrumb from '@/components/breadcrumb'
 import { getPostById, getRelatedPosts, formatDate, getAllPosts } from '@/lib/blog'
 import ReactMarkdown from 'react-markdown'
 
-interface BlogPostPageProps {
-  params: {
-    slug: string
-  }
+// 定义页面参数类型
+interface PageParams {
+  slug: string
 }
 
 // 生成静态路径
@@ -21,8 +20,8 @@ export async function generateStaticParams() {
 }
 
 // 生成元数据
-export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({ params }: { params: PageParams }): Promise<Metadata> {
+  const { slug } = params
   const post = getPostById(slug)
   
   if (!post) {
@@ -63,8 +62,8 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   }
 }
 
-export default async function BlogPostPage({ params }: BlogPostPageProps) {
-  const { slug } = await params
+export default async function BlogPostPage({ params }: { params: PageParams }) {
+  const { slug } = params
   const post = getPostById(slug)
   
   if (!post) {

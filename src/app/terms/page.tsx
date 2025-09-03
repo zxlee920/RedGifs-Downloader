@@ -44,14 +44,14 @@ export default function TermsPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
             <p className="mb-4 leading-relaxed">
-              By accessing and using RedGifs Downloader ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using RedGifs Downloader (&quot;the Service&quot;), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
             <p className="mb-4 leading-relaxed">
-              RedGifs Downloader is a free web-based tool that allows users to download videos, thumbnails, and cover images from RedGifs platform. The service is provided "as is" without any warranties.
+              RedGifs Downloader is a free web-based tool that allows users to download videos, thumbnails, and cover images from RedGifs platform. The service is provided &quot;as is&quot; without any warranties.
             </p>
           </section>
 
@@ -62,7 +62,7 @@ export default function TermsPage() {
               <li>Use the service only for lawful purposes</li>
               <li>Respect copyright and intellectual property rights</li>
               <li>Not download content without proper authorization</li>
-              <li>Not use the service to infringe on others' rights</li>
+              <li>Not use the service to infringe on others&apos; rights</li>
               <li>Not attempt to reverse engineer or exploit the service</li>
             </ul>
           </section>

@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
-import { Menu, Download, Moon, Sun } from 'lucide-react'
+import { Menu, Moon, Sun } from 'lucide-react'
+import Image from 'next/image'
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -23,7 +24,7 @@ export default function Navigation() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <img src="/lightning-logo.svg?v=1" alt="Lightning Logo" className="h-6 w-6" />
+            <Image src="/lightning-logo.svg?v=1" alt="Lightning Logo" width={24} height={24} className="h-6 w-6" />
             <span className="font-bold text-xl">RedGifs Downloader</span>
           </Link>
 
