@@ -33,71 +33,6 @@ export default {
       });
     }
     
-    // Handle HLS conversion API
-    if (request.method === 'POST' && url.pathname === '/api/convert-hls') {
-      try {
-        const { m3u8Url, outputFilename } = await request.json();
-        
-        // 获取m3u8播放列表
-        const m3u8Response = await fetch(m3u8Url);
-        if (!m3u8Response.ok) {
-          throw new Error('Failed to fetch m3u8 playlist');
-        }
-        
-        const m3u8Content = await m3u8Response.text();
-        
-        // 解析ts文件URLs
-        const tsUrls = [];
-        const lines = m3u8Content.split('\n');
-        const baseUrl = m3u8Url.substring(0, m3u8Url.lastIndexOf('/') + 1);
-        
-        for (const line of lines) {
-          if (line.trim() && !line.startsWith('#')) {
-            const tsUrl = line.startsWith('http') ? line : baseUrl + line;
-            tsUrls.push(tsUrl.trim());
-          }
-        }
-        
-        // 下载所有ts分片
-        const tsSegments = [];
-        for (const tsUrl of tsUrls) {
-          const tsResponse = await fetch(tsUrl);
-          if (tsResponse.ok) {
-            const tsData = await tsResponse.arrayBuffer();
-            tsSegments.push(new Uint8Array(tsData));
-          }
-        }
-        
-        // 合并ts分片
-        const totalLength = tsSegments.reduce((sum, segment) => sum + segment.length, 0);
-        const mergedData = new Uint8Array(totalLength);
-        let offset = 0;
-        
-        for (const segment of tsSegments) {
-          mergedData.set(segment, offset);
-          offset += segment.length;
-        }
-        
-        return new Response(mergedData, {
-          headers: {
-            'Content-Type': 'video/mp4',
-            'Content-Disposition': `attachment; filename="${outputFilename}"`,
-            ...corsHeaders,
-          },
-        });
-        
-      } catch (error) {
-        return new Response(JSON.stringify({ 
-          error: 'HLS conversion failed: ' + error.message 
-        }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        });
-      }
-    }
 
     // Handle POST requests for download API
     if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download')) {
@@ -145,16 +80,30 @@ export default {
         // Try to scrape RedGifs page first
         const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
         
-        if (scrapedData && scrapedData.videoUrl) {
-          const downloads = [
-            {
+        if (scrapedData && (scrapedData.videoUrl || scrapedData.hlsUrl)) {
+          const downloads = [];
+          
+          // 优先添加HLS链接（有音频，无水印）
+          if (scrapedData.hlsUrl) {
+            downloads.push({
+              type: 'video',
+              url: scrapedData.hlsUrl,
+              filename: `${videoId}.m3u8`,
+              quality: 'HLS (with audio, no watermark)',
+              size: null
+            });
+          }
+          
+          // 添加MP4链接作为备用
+          if (scrapedData.videoUrl) {
+            downloads.push({
               type: 'video',
               url: scrapedData.videoUrl,
               filename: `${videoId}_video.mp4`,
               quality: 'HD',
               size: null
-            }
-          ];
+            });
+          }
           
           if (scrapedData.posterUrl) {
             downloads.push({
@@ -173,7 +122,7 @@ export default {
             duration: 30,
             views: 0,
             likes: 0,
-            hasAudio: true,
+            hasAudio: scrapedData.hlsUrl ? true : false,
             downloads: downloads,
             note: 'Real RedGifs content extracted from webpage'
           }), {
@@ -238,7 +187,7 @@ export default {
         const downloads = [];
         
         if (gif.urls) {
-          // ✅ 优先返回 HLS（有声、无水印）
+          // HLS流（有音频，无水印）
           if (gif.urls.hls) {
             downloads.push({
               type: 'video',
@@ -249,24 +198,68 @@ export default {
             });
           }
 
-          // 备用：mp4 (无声，可能带水印)
-          if (gif.urls.hd || gif.urls.sd) {
+          // HD视频
+          if (gif.urls.hd) {
             downloads.push({
               type: 'video',
-              url: gif.urls.hd || gif.urls.sd,
-              filename: `${gif.id}_preview.mp4`,
-              quality: gif.urls.hd ? 'HD mp4 (no audio)' : 'SD mp4 (no audio)',
+              url: gif.urls.hd,
+              filename: `${gif.id}_hd.mp4`,
+              quality: 'HD',
               size: null
             });
           }
 
-          // 视频封面
+          // SD视频
+          if (gif.urls.sd) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.sd,
+              filename: `${gif.id}_sd.mp4`,
+              quality: 'SD',
+              size: null
+            });
+          }
+
+          // Mobile视频
+          if (gif.urls.mobile) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.mobile,
+              filename: `${gif.id}_mobile.mp4`,
+              quality: 'Mobile',
+              size: null
+            });
+          }
+
+          // GIF格式
+          if (gif.urls.gif) {
+            downloads.push({
+              type: 'video',
+              url: gif.urls.gif,
+              filename: `${gif.id}.gif`,
+              quality: 'GIF',
+              size: null
+            });
+          }
+
+          // 封面图片
           if (gif.urls.poster) {
             downloads.push({
               type: 'cover',
               url: gif.urls.poster,
-              filename: `${gif.id}_cover.jpg`,
+              filename: `${gif.id}_poster.jpg`,
               quality: 'Poster',
+              size: null
+            });
+          }
+
+          // 缩略图
+          if (gif.urls.thumbnail) {
+            downloads.push({
+              type: 'thumb',
+              url: gif.urls.thumbnail,
+              filename: `${gif.id}_thumb.jpg`,
+              quality: 'Thumbnail',
               size: null
             });
           }
@@ -313,6 +306,71 @@ export default {
       }
     }
 
+    // Handle GET requests for proxy download
+    if (request.method === 'GET' && url.pathname === '/proxy-download') {
+      try {
+        const fileUrl = url.searchParams.get('url');
+        const filename = url.searchParams.get('filename') || 'download';
+
+        if (!fileUrl) {
+          return new Response(JSON.stringify({ error: 'Missing URL parameter' }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          });
+        }
+
+        // 支持Range请求
+        const range = request.headers.get('Range');
+        const fetchHeaders = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://redgifs.com/',
+        };
+        
+        if (range) {
+          fetchHeaders['Range'] = range;
+        }
+
+        const response = await fetch(fileUrl, { headers: fetchHeaders });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.status}`);
+        }
+
+        const responseHeaders = {
+          'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          ...corsHeaders,
+        };
+
+        // 转发Range相关头部
+        if (response.headers.get('Content-Range')) {
+          responseHeaders['Content-Range'] = response.headers.get('Content-Range');
+        }
+        if (response.headers.get('Accept-Ranges')) {
+          responseHeaders['Accept-Ranges'] = response.headers.get('Accept-Ranges');
+        }
+        if (response.headers.get('Content-Length')) {
+          responseHeaders['Content-Length'] = response.headers.get('Content-Length');
+        }
+
+        return new Response(response.body, {
+          status: response.status,
+          headers: responseHeaders,
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: 'Failed to download file' }), {
+          status: 500,
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          }
+        });
+      }
+    }
+
     // Handle image proxy requests
     if (url.pathname === '/proxy-image' && request.method === 'GET') {
       const imageUrl = url.searchParams.get('url');
@@ -352,41 +410,6 @@ export default {
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders,
-          }
-        });
-      }
-    }
-
-    // Handle proxy download requests
-    if (url.pathname === '/proxy-download' && request.method === 'GET') {
-      const fileUrl = url.searchParams.get('url');
-      const filename = url.searchParams.get('filename');
-      
-      if (!fileUrl || !filename) {
-        return new Response(JSON.stringify({ error: 'Missing url or filename parameter' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      try {
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch file: ${response.status}`);
-        }
-
-        return new Response(response.body, {
-          headers: {
-            'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-            ...corsHeaders,
-          },
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ error: 'Failed to download file' }), {
-          status: 500,
-          headers: { 
-            'Content-Type': 'application/json',
             ...corsHeaders,
           }
         });
@@ -486,13 +509,15 @@ async function scrapeRedGifsPage(url, videoId) {
 
     const html = await response.text();
     
-    // Extract video URL from HTML
-    const videoUrlMatch = html.match(/"(https:\/\/[^"]*\.mp4[^"]*)"/);
-    const posterMatch = html.match(/"(https:\/\/[^"]*poster[^"]*\.jpg[^"]*)"/);
+    // 精确提取JSON字段
+    const hdSrcMatch = html.match(/"hdSrc":"(https:[^"]+\.mp4)"/);
+    const hlsMatch = html.match(/"hls":"(https:[^"]+\.m3u8)"/);
+    const posterMatch = html.match(/"poster":"(https:[^"]+\.jpg)"/);
 
-    if (videoUrlMatch) {
+    if (hdSrcMatch || hlsMatch) {
       return {
-        videoUrl: videoUrlMatch[1],
+        videoUrl: hdSrcMatch ? hdSrcMatch[1] : null,
+        hlsUrl: hlsMatch ? hlsMatch[1] : null,
         posterUrl: posterMatch ? posterMatch[1] : null
       };
     }
