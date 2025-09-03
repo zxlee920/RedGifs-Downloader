@@ -65,6 +65,7 @@ export default function RootLayout({
         {webmasterMeta && (
           <meta name={webmasterMeta.name} content={webmasterMeta.content} />
         )}
+        
       </head>
       <body className="antialiased min-h-screen flex flex-col" suppressHydrationWarning>
         <ThemeProvider
