@@ -2,6 +2,14 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
+    // 添加请求日志
+    console.log('Request received:', {
+      method: request.method,
+      url: request.url,
+      pathname: url.pathname,
+      headers: Object.fromEntries(request.headers.entries())
+    });
+    
     // CORS headers for all responses
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -35,8 +43,12 @@ export default {
     
     // Handle POST requests for download API
     if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download' || url.pathname.startsWith('/api/download'))) {
+      console.log('POST request matched, processing download API');
       try {
-        const { url: videoUrl } = await request.json();
+        const requestBody = await request.text();
+        console.log('Request body:', requestBody);
+        
+        const { url: videoUrl } = JSON.parse(requestBody);
 
         if (!videoUrl || !videoUrl.includes('redgifs.com')) {
           return new Response(JSON.stringify({ error: 'Invalid RedGifs URL' }), {
