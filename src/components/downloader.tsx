@@ -58,7 +58,11 @@ export default function Downloader() {
     setResults([])
 
     try {
-      const response = await fetch('/api/download', {
+      const apiUrl = process.env.NODE_ENV === 'development' 
+        ? '/api/download' 
+        : 'https://api.redgifsdownloader.top/api/download'
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +133,11 @@ export default function Downloader() {
         setBatchResults([...results])
 
         try {
-          const response = await fetch('/api/download', {
+          const apiUrl = process.env.NODE_ENV === 'development' 
+            ? '/api/download' 
+            : 'https://api.redgifsdownloader.top/api/download'
+          
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
@@ -170,7 +178,9 @@ export default function Downloader() {
   const handleFileDownload = async (fileUrl: string, filename: string) => {
     try {
       // 使用代理下载API来实现真正的文件下载
-      const downloadUrl = `/api/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+      const downloadUrl = process.env.NODE_ENV === 'development' 
+        ? `/api/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+        : `https://api.redgifsdownloader.top/api/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
       
       // 创建一个隐藏的链接来触发下载
       const link = document.createElement('a')
