@@ -12,14 +12,15 @@ import { Download, Loader2, CheckCircle, AlertCircle, Video, FileImage, List } f
 import Image from 'next/image'
 
 interface DownloadResult {
-  type: 'video' | 'cover'
+  type: 'video' | 'cover' | 'thumb'
   url: string
   filename: string
+  quality: string
   size?: string
 }
 
 interface ApiDownloadResult {
-  type: 'video' | 'cover'
+  type: 'video' | 'cover' | 'thumb'
   url: string
   filename: string
   size?: string
@@ -295,7 +296,7 @@ export default function Downloader() {
                     {results.find(r => r.type === 'cover') && (
                       <div className="w-20 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
                         <Image
-                          src={`/proxy-image?url=${encodeURIComponent(results.find(r => r.type === 'cover')?.url || '')}`}
+                          src={`/proxy-image?url=${encodeURIComponent(results.find(r => r.type === 'thumb')?.url || results.find(r => r.type === 'cover')?.url || '')}`}
                           alt="Cover Preview"
                           className="w-full h-full object-cover"
                           width={320}
@@ -418,7 +419,7 @@ https://redgifs.com/watch/example3...`}
                             {batchResult.results.find(r => r.type === 'cover') && (
                               <div className="w-14 border rounded-lg overflow-hidden bg-muted" style={{aspectRatio: '9/16'}}>
                                 <Image
-                                  src={`/proxy-image?url=${encodeURIComponent(batchResult.results.find(r => r.type === 'cover')?.url || '')}`}
+                                  src={`/proxy-image?url=${encodeURIComponent(batchResult.results.find(r => r.type === 'thumb')?.url || batchResult.results.find(r => r.type === 'cover')?.url || '')}`}
                                   alt="Cover Preview"
                                   className="w-full h-full object-cover"
                                   width={320}

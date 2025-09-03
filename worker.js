@@ -181,12 +181,23 @@ export default {
           });
         }
         
-        if (gif.urls && gif.urls.poster) {
+        if (gif.urls && (gif.urls.poster || gif.urls.thumb)) {
           downloads.push({
             type: 'cover',
-            url: gif.urls.poster,
+            url: gif.urls.poster || gif.urls.thumb,
             filename: `${gif.id}_cover.jpg`,
             quality: 'Standard',
+            size: null
+          });
+        }
+        
+        // Add thumb for preview if available
+        if (gif.urls && gif.urls.thumb) {
+          downloads.push({
+            type: 'thumb',
+            url: gif.urls.thumb,
+            filename: `${gif.id}_thumb.jpg`,
+            quality: 'Thumbnail',
             size: null
           });
         }
@@ -396,6 +407,7 @@ async function scrapeRedGifsPage(url, videoId) {
         'DNT': '1',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
+        'Referer': 'https://redgifs.com/',
       }
     });
 
@@ -405,14 +417,59 @@ async function scrapeRedGifsPage(url, videoId) {
 
     const html = await response.text();
     
-    // Extract video URL from HTML
-    const videoUrlMatch = html.match(/"(https:\/\/[^"]*\.mp4[^"]*)"/);
-    const posterMatch = html.match(/"(https:\/\/[^"]*poster[^"]*\.jpg[^"]*)"/);
+    // Try multiple patterns to extract video URLs
+    const videoPatterns = [
+      // HD video URLs
+      /"(https:\/\/[^"]*\.mp4[^"]*)"/g,
+      // Alternative video patterns
+      /'(https:\/\/[^']*\.mp4[^']*)'/g,
+      // JSON embedded video URLs
+      /"videoUrl"\s*:\s*"(https:\/\/[^"]*\.mp4[^"]*)"/g,
+      /"hd"\s*:\s*"(https:\/\/[^"]*\.mp4[^"]*)"/g,
+      /"sd"\s*:\s*"(https:\/\/[^"]*\.mp4[^"]*)"/g,
+      // Direct file URLs
+      /https:\/\/[\w.-]+\.redgifs\.com\/[\w\/-]+\.mp4/g
+    ];
+    
+    const posterPatterns = [
+      /"(https:\/\/[^"]*poster[^"]*\.(jpg|jpeg|png)[^"]*)"/g,
+      /"(https:\/\/[^"]*thumb[^"]*\.(jpg|jpeg|png)[^"]*)"/g,
+      /"posterUrl"\s*:\s*"(https:\/\/[^"]*\.(jpg|jpeg|png)[^"]*)"/g
+    ];
 
-    if (videoUrlMatch) {
+    let videoUrl = null;
+    let posterUrl = null;
+
+    // Try to find video URL
+    for (const pattern of videoPatterns) {
+      const matches = html.matchAll(pattern);
+      for (const match of matches) {
+        const url = match[1] || match[0];
+        if (url && url.includes('.mp4') && !url.includes('poster') && !url.includes('thumb')) {
+          videoUrl = url;
+          break;
+        }
+      }
+      if (videoUrl) break;
+    }
+
+    // Try to find poster URL
+    for (const pattern of posterPatterns) {
+      const matches = html.matchAll(pattern);
+      for (const match of matches) {
+        const url = match[1] || match[0];
+        if (url && (url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png'))) {
+          posterUrl = url;
+          break;
+        }
+      }
+      if (posterUrl) break;
+    }
+
+    if (videoUrl) {
       return {
-        videoUrl: videoUrlMatch[1],
-        posterUrl: posterMatch ? posterMatch[1] : null
+        videoUrl: videoUrl,
+        posterUrl: posterUrl
       };
     }
 
