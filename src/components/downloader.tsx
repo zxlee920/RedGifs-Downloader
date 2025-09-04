@@ -310,39 +310,6 @@ export default function Downloader() {
                   <span className="text-sm font-medium">Download links ready!</span>
                 </div>
                 
-                {/* 视频信息展示 */}
-                {videoInfo && (
-                  <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-sm">{videoInfo.title}</h3>
-                      {videoInfo.hasAudio && (
-                        <Badge variant="secondary" className="text-xs">
-                          🔊 Audio
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
-                      <div>👤 {videoInfo.username}{videoInfo.verified && ' ✓'}</div>
-                      <div>⏱️ {videoInfo.duration}s</div>
-                      <div>👁️ {videoInfo.views.toLocaleString()}</div>
-                      <div>❤️ {videoInfo.likes.toLocaleString()}</div>
-                    </div>
-                    {videoInfo.tags && videoInfo.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {videoInfo.tags.slice(0, 5).map((tag, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">
-                            #{tag}
-                          </Badge>
-                        ))}
-                        {videoInfo.tags.length > 5 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{videoInfo.tags.length - 5} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
                 <div className="flex gap-2 md:gap-6 items-start">
                   {/* 左侧封面图预览 */}
                   <div className="flex-shrink-0">
