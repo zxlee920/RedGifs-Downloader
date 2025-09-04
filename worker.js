@@ -89,68 +89,129 @@ export default {
       }
     }
     
-    // Proxy download - 关键修复
+    // Proxy download - 增强错误处理
     if (url.pathname === '/proxy-download') {
       const fileUrl = url.searchParams.get('url');
       const filename = url.searchParams.get('filename') || 'video.mp4';
       
+      console.log('Proxy download request:', { fileUrl, filename });
+      
       if (!fileUrl) {
-        return new Response(JSON.stringify({ error: 'Missing URL' }), {
+        return new Response(JSON.stringify({ error: 'Missing URL parameter' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
       
       try {
-        // 对于RedGifs URL，需要特殊处理
-        const headers = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': 'https://redgifs.com/',
-          'Origin': 'https://redgifs.com',
-          'Accept': '*/*',
-          'Accept-Encoding': 'identity',  // 重要：避免编码问题
-          'Range': request.headers.get('Range') || undefined  // 支持断点续传
-        };
-        
-        // 如果是API域名且有token，添加认证
-        if (redgifsAPI.token && (fileUrl.includes('api.redgifs.com') || fileUrl.includes('.redgifs.com'))) {
-          headers['Authorization'] = `Bearer ${redgifsAPI.token}`;
+        // 验证URL格式
+        let targetUrl;
+        try {
+          targetUrl = new URL(fileUrl);
+        } catch (urlError) {
+          console.error('Invalid URL format:', fileUrl);
+          return new Response(JSON.stringify({ 
+            error: 'Invalid URL format',
+            details: urlError.message 
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
         }
         
-        const response = await fetch(fileUrl, { headers });
+        // 基础请求头
+        const baseHeaders = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache'
+        };
+        
+        // 根据域名设置不同的请求头
+        if (targetUrl.hostname.includes('redgifs.com')) {
+          baseHeaders['Referer'] = 'https://redgifs.com/';
+          baseHeaders['Origin'] = 'https://redgifs.com';
+          
+          // 如果是API域名且有token，添加认证
+          if (redgifsAPI.token && targetUrl.hostname.includes('api.redgifs.com')) {
+            baseHeaders['Authorization'] = `Bearer ${redgifsAPI.token}`;
+          }
+        }
+        
+        // 支持Range请求
+        const rangeHeader = request.headers.get('Range');
+        if (rangeHeader) {
+          baseHeaders['Range'] = rangeHeader;
+        }
+        
+        console.log('Fetching URL:', fileUrl, 'with headers:', Object.keys(baseHeaders));
+        
+        const response = await fetch(fileUrl, { 
+          headers: baseHeaders,
+          cf: {
+            // Cloudflare特定选项
+            cacheTtl: 300,
+            cacheEverything: false
+          }
+        });
+        
+        console.log('Response status:', response.status, 'headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-          // 如果失败，尝试不带token重试（有些URL不需要token）
+          // 尝试简化的请求头重试
+          console.log('First attempt failed, retrying with minimal headers...');
           const retryResponse = await fetch(fileUrl, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Referer': 'https://redgifs.com/'
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': '*/*'
             }
           });
           
           if (retryResponse.ok) {
+            console.log('Retry successful');
+            const responseHeaders = {
+              'Content-Type': retryResponse.headers.get('Content-Type') || 'video/mp4',
+              'Content-Disposition': `attachment; filename="${filename}"`,
+              ...corsHeaders
+            };
+            
+            // 复制重要的响应头
+            ['Content-Length', 'Content-Range', 'Accept-Ranges'].forEach(header => {
+              const value = retryResponse.headers.get(header);
+              if (value) responseHeaders[header] = value;
+            });
+            
             return new Response(retryResponse.body, {
-              headers: {
-                'Content-Type': retryResponse.headers.get('Content-Type') || 'video/mp4',
-                'Content-Disposition': `attachment; filename="${filename}"`,
-                ...corsHeaders
-              }
+              status: retryResponse.status,
+              headers: responseHeaders
             });
           }
           
-          throw new Error(`Download failed: ${response.status}`);
+          console.error('Both attempts failed:', response.status, retryResponse.status);
+          return new Response(JSON.stringify({ 
+            error: 'File not accessible',
+            details: `HTTP ${response.status}: ${response.statusText}`,
+            url: fileUrl
+          }), {
+            status: 502,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
         }
         
+        // 成功响应
         const responseHeaders = {
           'Content-Type': response.headers.get('Content-Type') || 'video/mp4',
           'Content-Disposition': `attachment; filename="${filename}"`,
           ...corsHeaders
         };
         
-        if (response.headers.get('Content-Length')) {
-          responseHeaders['Content-Length'] = response.headers.get('Content-Length');
-        }
+        // 复制重要的响应头
+        ['Content-Length', 'Content-Range', 'Accept-Ranges', 'Last-Modified', 'ETag'].forEach(header => {
+          const value = response.headers.get(header);
+          if (value) responseHeaders[header] = value;
+        });
         
+        console.log('Proxy download successful');
         return new Response(response.body, {
           status: response.status,
           headers: responseHeaders
@@ -159,8 +220,10 @@ export default {
       } catch (error) {
         console.error('Proxy download error:', error);
         return new Response(JSON.stringify({ 
-          error: 'Download failed',
-          details: error.message 
+          error: 'Proxy download failed',
+          details: error.message,
+          stack: error.stack,
+          url: fileUrl
         }), {
           status: 500,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
