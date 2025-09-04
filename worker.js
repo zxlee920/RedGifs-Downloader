@@ -187,11 +187,66 @@ export default {
             });
           }
           
-          console.error('Both attempts failed:', response.status, retryResponse.status);
+          // 如果是403/404错误且URL是files.redgifs.com格式，尝试备用URL
+          if ((response.status === 403 || response.status === 404) && fileUrl.includes('files.redgifs.com')) {
+            console.log('Trying alternative URL formats...');
+            
+            // 从URL提取视频ID
+            const urlMatch = fileUrl.match(/files\.redgifs\.com\/([^-]+)/);
+            if (urlMatch) {
+              const videoId = urlMatch[1];
+              
+              // 尝试备用URL格式
+              const alternativeUrls = [
+                `https://thumbs4.redgifs.com/${videoId.charAt(0).toUpperCase()}${videoId.slice(1)}-large.mp4`,
+                `https://thumbs3.redgifs.com/${videoId.charAt(0).toUpperCase()}${videoId.slice(1)}-large.mp4`,
+                `https://thumbs2.redgifs.com/${videoId.charAt(0).toUpperCase()}${videoId.slice(1)}-large.mp4`,
+                `https://thumbs4.redgifs.com/${videoId.charAt(0).toUpperCase()}${videoId.slice(1)}.mp4`,
+                `https://thumbs3.redgifs.com/${videoId.charAt(0).toUpperCase()}${videoId.slice(1)}.mp4`
+              ];
+              
+              for (const altUrl of alternativeUrls) {
+                try {
+                  console.log('Trying alternative URL:', altUrl);
+                  const altResponse = await fetch(altUrl, {
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                      'Accept': '*/*',
+                      'Referer': 'https://redgifs.com/'
+                    }
+                  });
+                  
+                  if (altResponse.ok) {
+                    console.log('Alternative URL successful:', altUrl);
+                    const responseHeaders = {
+                      'Content-Type': altResponse.headers.get('Content-Type') || 'video/mp4',
+                      'Content-Disposition': `attachment; filename="${filename}"`,
+                      ...corsHeaders
+                    };
+                    
+                    ['Content-Length', 'Content-Range', 'Accept-Ranges'].forEach(header => {
+                      const value = altResponse.headers.get(header);
+                      if (value) responseHeaders[header] = value;
+                    });
+                    
+                    return new Response(altResponse.body, {
+                      status: altResponse.status,
+                      headers: responseHeaders
+                    });
+                  }
+                } catch (altError) {
+                  console.log('Alternative URL failed:', altUrl, altError.message);
+                }
+              }
+            }
+          }
+          
+          console.error('All attempts failed:', response.status, retryResponse.status);
           return new Response(JSON.stringify({ 
             error: 'File not accessible',
-            details: `HTTP ${response.status}: ${response.statusText}`,
-            url: fileUrl
+            details: `HTTP ${response.status}: ${response.statusText}. Tried alternative URLs but none worked.`,
+            url: fileUrl,
+            suggestion: 'Try using a different quality option from the download list'
           }), {
             status: 502,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -261,70 +316,69 @@ function extractVideoId(url) {
   return null;
 }
 
-// 直接构建URLs（备用方案）
+// 直接构建URLs（备用方案）- 增强版
 function buildDirectUrls(videoId) {
   const id = videoId.toLowerCase();
-  
   const downloads = [];
   
-  // 尝试多种URL格式
-  const urlFormats = [
-    // 新格式 - 通常更可靠
-    `https://files.redgifs.com/${id}-hd.mp4`,
-    `https://files.redgifs.com/${id}-sd.mp4`,
-    `https://files.redgifs.com/${id}-mobile.mp4`,
-    // 旧格式 - 备用
-    `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
-    `https://thumbs3.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
+  // 多种URL格式，按可靠性排序
+  const urlVariants = [
+    // 最新格式 - files.redgifs.com
+    { base: 'https://files.redgifs.com', suffix: '-hd.mp4', quality: 'HD 1080p', priority: 1 },
+    { base: 'https://files.redgifs.com', suffix: '-sd.mp4', quality: 'SD 720p', priority: 2 },
+    { base: 'https://files.redgifs.com', suffix: '-mobile.mp4', quality: 'Mobile 480p', priority: 3 },
+    
+    // 备用格式 - thumbs域名
+    { base: 'https://thumbs4.redgifs.com', suffix: '-large.mp4', quality: 'HD (Thumbs4)', priority: 4, capitalize: true },
+    { base: 'https://thumbs3.redgifs.com', suffix: '-large.mp4', quality: 'HD (Thumbs3)', priority: 5, capitalize: true },
+    { base: 'https://thumbs2.redgifs.com', suffix: '-large.mp4', quality: 'HD (Thumbs2)', priority: 6, capitalize: true },
+    { base: 'https://thumbs.redgifs.com', suffix: '-large.mp4', quality: 'HD (Thumbs)', priority: 7, capitalize: true },
+    
     // 更多备用格式
-    `https://redgifs.com/ifr/${id}`,
-    `https://api.redgifs.com/v2/gifs/${id}/files/hd.mp4`
+    { base: 'https://thumbs4.redgifs.com', suffix: '.mp4', quality: 'Standard (Thumbs4)', priority: 8, capitalize: true },
+    { base: 'https://thumbs3.redgifs.com', suffix: '.mp4', quality: 'Standard (Thumbs3)', priority: 9, capitalize: true },
+    
+    // 旧格式兼容
+    { base: 'https://files.redgifs.com', suffix: '.mp4', quality: 'Standard', priority: 10 },
   ];
   
-  // HD版本
-  downloads.push({
-    type: 'video',
-    url: `https://files.redgifs.com/${id}-hd.mp4`,
-    filename: `${id}_hd.mp4`,
-    quality: 'HD 1080p',
-    hasAudio: true,
-    preferred: true
+  // 生成所有变体
+  urlVariants.forEach(variant => {
+    const fileName = variant.capitalize ? 
+      `${id.charAt(0).toUpperCase()}${id.slice(1)}` : id;
+    
+    downloads.push({
+      type: 'video',
+      url: `${variant.base}/${fileName}${variant.suffix}`,
+      filename: `${id}_${variant.quality.toLowerCase().replace(/[^a-z0-9]/g, '_')}.mp4`,
+      quality: variant.quality,
+      hasAudio: true,
+      preferred: variant.priority === 1,
+      priority: variant.priority
+    });
   });
   
-  // SD版本
-  downloads.push({
-    type: 'video',
-    url: `https://files.redgifs.com/${id}-sd.mp4`,
-    filename: `${id}_sd.mp4`,
-    quality: 'SD 720p',
-    hasAudio: true
+  // 添加封面图片的多种格式
+  const posterVariants = [
+    `https://files.redgifs.com/${id}-poster.jpg`,
+    `https://files.redgifs.com/${id}.jpg`,
+    `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-poster.jpg`,
+    `https://thumbs3.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-poster.jpg`,
+    `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}.jpg`
+  ];
+  
+  posterVariants.forEach((posterUrl, index) => {
+    downloads.push({
+      type: 'cover',
+      url: posterUrl,
+      filename: `${id}_poster_${index + 1}.jpg`,
+      quality: `Poster ${index + 1}`,
+      priority: index + 1
+    });
   });
   
-  // Mobile版本
-  downloads.push({
-    type: 'video',
-    url: `https://files.redgifs.com/${id}-mobile.mp4`,
-    filename: `${id}_mobile.mp4`,
-    quality: 'Mobile 480p',
-    hasAudio: true
-  });
-  
-  // 备用URL格式
-  downloads.push({
-    type: 'video',
-    url: `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
-    filename: `${id}_backup_hd.mp4`,
-    quality: 'HD (Backup)',
-    hasAudio: true
-  });
-  
-  // 封面图
-  downloads.push({
-    type: 'cover',
-    url: `https://files.redgifs.com/${id}-poster.jpg`,
-    filename: `${id}_poster.jpg`,
-    quality: 'Poster'
-  });
+  // 按优先级排序
+  downloads.sort((a, b) => (a.priority || 999) - (b.priority || 999));
   
   return {
     success: true,
@@ -335,7 +389,7 @@ function buildDirectUrls(videoId) {
     likes: 0,
     hasAudio: true,
     downloads: downloads,
-    note: 'Multiple URL formats - Try different options if one fails'
+    note: 'Multiple URL formats available - Try different options if one fails. URLs are sorted by reliability.'
   };
 }
 
