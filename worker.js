@@ -202,42 +202,63 @@ function extractVideoId(url) {
 function buildDirectUrls(videoId) {
   const id = videoId.toLowerCase();
   
-  // RedGifs的CDN URL模式
-  const cdnDomains = [
-    'thumbs4.redgifs.com',
-    'thumbs3.redgifs.com', 
-    'thumbs2.redgifs.com'
-  ];
-  
   const downloads = [];
   
-  // HD版本 - 无水印，有声音
-  for (const domain of cdnDomains) {
-    downloads.push({
-      type: 'video',
-      url: `https://${domain}/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
-      filename: `${id}_hd.mp4`,
-      quality: 'HD 1080p (No Watermark)',
-      hasAudio: true,
-      watermark: false,
-      preferred: true
-    });
-  }
+  // 尝试多种URL格式
+  const urlFormats = [
+    // 新格式 - 通常更可靠
+    `https://files.redgifs.com/${id}-hd.mp4`,
+    `https://files.redgifs.com/${id}-sd.mp4`,
+    `https://files.redgifs.com/${id}-mobile.mp4`,
+    // 旧格式 - 备用
+    `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
+    `https://thumbs3.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
+    // 更多备用格式
+    `https://redgifs.com/ifr/${id}`,
+    `https://api.redgifs.com/v2/gifs/${id}/files/hd.mp4`
+  ];
   
-  // Mobile版本 - 备用
+  // HD版本
   downloads.push({
     type: 'video',
-    url: `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-mobile.mp4`,
+    url: `https://files.redgifs.com/${id}-hd.mp4`,
+    filename: `${id}_hd.mp4`,
+    quality: 'HD 1080p',
+    hasAudio: true,
+    preferred: true
+  });
+  
+  // SD版本
+  downloads.push({
+    type: 'video',
+    url: `https://files.redgifs.com/${id}-sd.mp4`,
+    filename: `${id}_sd.mp4`,
+    quality: 'SD 720p',
+    hasAudio: true
+  });
+  
+  // Mobile版本
+  downloads.push({
+    type: 'video',
+    url: `https://files.redgifs.com/${id}-mobile.mp4`,
     filename: `${id}_mobile.mp4`,
     quality: 'Mobile 480p',
-    hasAudio: true,
-    watermark: false
+    hasAudio: true
+  });
+  
+  // 备用URL格式
+  downloads.push({
+    type: 'video',
+    url: `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-large.mp4`,
+    filename: `${id}_backup_hd.mp4`,
+    quality: 'HD (Backup)',
+    hasAudio: true
   });
   
   // 封面图
   downloads.push({
     type: 'cover',
-    url: `https://thumbs4.redgifs.com/${id.charAt(0).toUpperCase()}${id.slice(1)}-poster.jpg`,
+    url: `https://files.redgifs.com/${id}-poster.jpg`,
     filename: `${id}_poster.jpg`,
     quality: 'Poster'
   });
@@ -251,7 +272,7 @@ function buildDirectUrls(videoId) {
     likes: 0,
     hasAudio: true,
     downloads: downloads,
-    note: 'Direct URLs - Try different options if one fails'
+    note: 'Multiple URL formats - Try different options if one fails'
   };
 }
 
