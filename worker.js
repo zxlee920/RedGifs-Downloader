@@ -10,11 +10,32 @@ export default {
       'Access-Control-Max-Age': '86400',
     };
     
+    // Debug information
+    console.log('Method:', request.method);
+    console.log('Pathname:', url.pathname);
+    console.log('Full URL:', request.url);
+    
     // Handle CORS preflight requests FIRST
     if (request.method === 'OPTIONS') {
       return new Response('OPTIONS OK', {
         status: 200,
         headers: corsHeaders,
+      });
+    }
+    
+    // Debug endpoint
+    if (request.method === 'GET' && url.pathname === '/debug') {
+      return new Response(JSON.stringify({
+        method: request.method,
+        pathname: url.pathname,
+        url: request.url,
+        headers: Object.fromEntries(request.headers),
+        timestamp: new Date().toISOString()
+      }, null, 2), {
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
       });
     }
     
@@ -33,8 +54,8 @@ export default {
       });
     }
     
-    // Handle POST requests for download API
-    if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download')) {
+    // Handle POST requests for download API - 改进路由匹配
+    if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download' || url.pathname === '/download')) {
       try {
         const { url: videoUrl } = await request.json();
 
@@ -671,9 +692,6 @@ async function scrapeRedGifsPage(url, videoId) {
     return null;
   } catch (error) {
     console.error('Scraping error:', error);
-    console.log('Method:', request.method);
-    console.log('Pathname:', url.pathname);
-    console.log('Full URL:', request.url);
     return null;
   }
 }
