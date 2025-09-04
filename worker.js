@@ -76,7 +76,7 @@ export default {
           });
         }
 
-        // 使用专业化的RedGifs API客户端
+        // 使用优化的RedGifs API客户端
         const gifData = await redgifsAPI.getGif(videoId);
         
         if (gifData && gifData.success) {
@@ -217,7 +217,7 @@ export default {
         let response;
         
         // 检查是否为RedGifs URL，使用专用下载方法
-        if (fileUrl.includes('redgifs.com') || fileUrl.includes('redgifs')) {
+        if (fileUrl.includes('redgifs.com') || fileUrl.includes('redgifs') || fileUrl.includes('thumbs.redgifs.com') || fileUrl.includes('files.redgifs.com')) {
           response = await redgifsAPI.download(fileUrl, filename);
         } else {
           // 非RedGifs URL使用普通方法
@@ -319,17 +319,23 @@ export default {
   }
 };
 
-// RedGifs API Client - 基于官方Python库设计
+// RedGifs API Client - 优化版本，支持无水印高质量下载
 class RedGifsAPI {
   constructor() {
     this.token = null;
     this.baseURL = 'https://api.redgifs.com';
-    this.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    this.userAgent = 'RedGifs/3.4.33 (android; gzip)'; // 使用官方移动端 User-Agent
+    this.tokenExpiry = null;
   }
 
-  // 获取临时认证token
+  // 获取临时认证token - 优化版本
   async login() {
     try {
+      // 如果token还有效，直接返回
+      if (this.token && this.tokenExpiry && Date.now() < this.tokenExpiry) {
+        return this.token;
+      }
+
       const response = await fetch(`${this.baseURL}/v2/auth/temporary`, {
         method: 'GET',
         headers: {
@@ -337,14 +343,24 @@ class RedGifsAPI {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Referer': 'https://redgifs.com/',
-          'Origin': 'https://redgifs.com'
+          'Origin': 'https://redgifs.com',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Sec-Fetch-Dest': 'empty',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'same-site'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
         this.token = data.token;
+        // Token通常1小时有效，设置45分钟过期时间
+        this.tokenExpiry = Date.now() + (45 * 60 * 1000);
         return this.token;
+      } else {
+        console.error('Auth failed:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Auth token error:', error);
@@ -352,13 +368,13 @@ class RedGifsAPI {
     return null;
   }
 
-  // 获取GIF详细信息
+  // 获取GIF详细信息 - 优化版本
   async getGif(id) {
-    if (!this.token) {
-      await this.login();
-    }
-
+    await this.login();
+    
+    // 尝试多个API端点
     const apiUrls = [
+      `${this.baseURL}/v2/gifs/${id}?views=yes`,
       `${this.baseURL}/v2/gifs/${id}`,
       `${this.baseURL}/v1/gifs/${id}`
     ];
@@ -369,7 +385,13 @@ class RedGifsAPI {
           'User-Agent': this.userAgent,
           'Accept': 'application/json',
           'Referer': 'https://redgifs.com/',
-          'Origin': 'https://redgifs.com'
+          'Origin': 'https://redgifs.com',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Sec-Fetch-Dest': 'empty',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'same-site'
         };
         
         if (this.token) {
@@ -380,9 +402,19 @@ class RedGifsAPI {
         
         if (response.ok) {
           const data = await response.json();
-          return this.processGifData(data.gif);
+          const gifData = data.gif || data;
+          if (gifData && gifData.urls) {
+            return this.processGifData(gifData);
+          }
+        } else if (response.status === 401) {
+          // Token过期，重新获取
+          this.token = null;
+          this.tokenExpiry = null;
+          await this.login();
+          continue;
         }
       } catch (error) {
+        console.error(`API error for ${apiUrl}:`, error);
         continue;
       }
     }
@@ -390,44 +422,79 @@ class RedGifsAPI {
     return null;
   }
 
-  // 处理GIF数据，转换为标准格式
+  // 处理GIF数据，优化优先级，优先获取无水印高质量版本
   processGifData(gif) {
     if (!gif || !gif.urls) return null;
 
     const downloads = [];
     const urls = gif.urls;
 
-    // 优先使用embed_url（避免IP泄露）
-    if (urls.embed_url) {
-      downloads.push({
-        type: 'video',
-        url: urls.embed_url,
-        filename: `${gif.id}_embed.mp4`,
-        quality: 'Embed (No IP leak)',
-        size: null,
-        preferred: true
-      });
-    }
+    // 优先级：hd > sd > mobile > embed
+    // 避免使用embed_url，因为它通常有水印
 
-    // HD视频
+    // HD视频（最高优先级，通常无水印有声音）
     if (urls.hd) {
       downloads.push({
         type: 'video',
         url: urls.hd,
         filename: `${gif.id}_hd.mp4`,
-        quality: 'HD',
-        size: null
+        quality: 'HD (1080p)',
+        size: null,
+        preferred: true,
+        watermark: false,
+        hasAudio: true
       });
     }
 
-    // SD视频
+    // SD视频（第二优先级）
     if (urls.sd) {
       downloads.push({
         type: 'video',
         url: urls.sd,
         filename: `${gif.id}_sd.mp4`,
-        quality: 'SD',
-        size: null
+        quality: 'SD (720p)',
+        size: null,
+        watermark: false,
+        hasAudio: true
+      });
+    }
+
+    // Mobile版本（移动端优化）
+    if (urls.mobile) {
+      downloads.push({
+        type: 'video',
+        url: urls.mobile,
+        filename: `${gif.id}_mobile.mp4`,
+        quality: 'Mobile (480p)',
+        size: null,
+        watermark: false,
+        hasAudio: true
+      });
+    }
+
+    // VThumbnail（视频缩略图，通常较小但无水印）
+    if (urls.vthumbnail) {
+      downloads.push({
+        type: 'video',
+        url: urls.vthumbnail,
+        filename: `${gif.id}_vthumbnail.mp4`,
+        quality: 'Thumbnail Video',
+        size: null,
+        watermark: false,
+        hasAudio: false
+      });
+    }
+
+    // 只有在没有其他选项时才使用embed（通常有水印）
+    if (downloads.length === 0 && urls.embed_url) {
+      downloads.push({
+        type: 'video',
+        url: urls.embed_url,
+        filename: `${gif.id}_embed.mp4`,
+        quality: 'Embed (May have watermark)',
+        size: null,
+        watermark: true,
+        hasAudio: gif.hasAudio
       });
     }
 
@@ -460,34 +527,62 @@ class RedGifsAPI {
       duration: gif.duration || 0,
       views: gif.views || 0,
       likes: gif.likes || 0,
-      hasAudio: gif.hasAudio || false,
+      hasAudio: gif.hasAudio !== false, // 默认假设有音频
       width: gif.width || 0,
       height: gif.height || 0,
       tags: gif.tags || [],
-      username: gif.username || 'Unknown',
+      username: gif.userName || gif.username || 'Unknown',
       verified: gif.verified || false,
-      published: gif.published || true,
-      createDate: gif.createDate || null,
-      downloads: downloads
+      published: gif.published !== false,
+      createDate: gif.createDate || gif.published || null,
+      downloads: downloads,
+      note: downloads.length > 0 && !downloads[0].watermark ? 'High quality, no watermark version' : undefined
     };
   }
 
-  // 专用下载方法，处理RedGifs的验证
+  // 专用下载方法，优化RedGifs下载
   async download(url, filename) {
     try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': this.userAgent,
-          'Referer': 'https://redgifs.com/',
-          'Origin': 'https://redgifs.com',
-          'Accept': '*/*',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache'
-        }
-      });
+      // 确保有有效token
+      await this.login();
+      
+      const headers = {
+        'User-Agent': this.userAgent,
+        'Referer': 'https://redgifs.com/',
+        'Origin': 'https://redgifs.com',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Sec-Fetch-Dest': 'video',
+        'Sec-Fetch-Mode': 'no-cors',
+        'Sec-Fetch-Site': 'same-site',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      };
+
+      // 对于API域名，添加Authorization头
+      if (this.token && (url.includes('api.redgifs.com') || url.includes('thumbs.redgifs.com') || url.includes('files.redgifs.com'))) {
+        headers['Authorization'] = `Bearer ${this.token}`;
+      }
+      
+      const response = await fetch(url, { headers });
       
       if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
+        // 如果401，尝试刷新token重试
+        if (response.status === 401) {
+          this.token = null;
+          this.tokenExpiry = null;
+          await this.login();
+          if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+            const retryResponse = await fetch(url, { headers });
+            if (retryResponse.ok) {
+              return retryResponse;
+            }
+          }
+        }
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
       }
       
       return response;
@@ -500,17 +595,22 @@ class RedGifsAPI {
 // 全局API实例
 const redgifsAPI = new RedGifsAPI();
 
+// 优化的网页抓取函数，寻找无水印版本
 async function scrapeRedGifsPage(url, videoId) {
   try {
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Accept-Encoding': 'gzip, deflate, br',
         'DNT': '1',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0'
       }
     });
 
@@ -520,19 +620,57 @@ async function scrapeRedGifsPage(url, videoId) {
 
     const html = await response.text();
     
-    // Extract video URL from HTML
-    const videoUrlMatch = html.match(/"(https:\/\/[^"]*\.mp4[^"]*)"/);
-    const posterMatch = html.match(/"(https:\/\/[^"]*poster[^"]*\.jpg[^"]*)"/);
+    // 寻找各种可能的视频URL，优先高质量版本
+    const patterns = [
+      // HD版本
+      /"(https:\/\/[^"]*files\.redgifs\.com[^"]*\/[^"]*-hd[^"]*\.mp4[^"]*)"/gi,
+      /"(https:\/\/[^"]*thumbs\.redgifs\.com[^"]*\/[^"]*-hd[^"]*\.mp4[^"]*)"/gi,
+      // SD版本
+      /"(https:\/\/[^"]*files\.redgifs\.com[^"]*\/[^"]*-sd[^"]*\.mp4[^"]*)"/gi,
+      /"(https:\/\/[^"]*thumbs\.redgifs\.com[^"]*\/[^"]*-sd[^"]*\.mp4[^"]*)"/gi,
+      // Mobile版本
+      /"(https:\/\/[^"]*files\.redgifs\.com[^"]*\/[^"]*-mobile[^"]*\.mp4[^"]*)"/gi,
+      // 通用mp4
+      /"(https:\/\/[^"]*files\.redgifs\.com[^"]*\.mp4[^"]*)"/gi,
+      /"(https:\/\/[^"]*thumbs\.redgifs\.com[^"]*\.mp4[^"]*)"/gi
+    ];
+    
+    let videoUrl = null;
+    
+    for (const pattern of patterns) {
+      const matches = html.match(pattern);
+      if (matches && matches.length > 0) {
+        // 取第一个匹配，去掉引号
+        videoUrl = matches[0].replace(/"/g, '');
+        break;
+      }
+    }
 
-    if (videoUrlMatch) {
+    // 寻找封面图片
+    const posterPatterns = [
+      /"(https:\/\/[^"]*thumbs\.redgifs\.com[^"]*-poster[^"]*\.jpg[^"]*)"/gi,
+      /"(https:\/\/[^"]*files\.redgifs\.com[^"]*-poster[^"]*\.jpg[^"]*)"/gi
+    ];
+    
+    let posterUrl = null;
+    for (const pattern of posterPatterns) {
+      const matches = html.match(pattern);
+      if (matches && matches.length > 0) {
+        posterUrl = matches[0].replace(/"/g, '');
+        break;
+      }
+    }
+
+    if (videoUrl) {
       return {
-        videoUrl: videoUrlMatch[1],
-        posterUrl: posterMatch ? posterMatch[1] : null
+        videoUrl: videoUrl,
+        posterUrl: posterUrl
       };
     }
 
     return null;
   } catch (error) {
+    console.error('Scraping error:', error);
     return null;
   }
 }

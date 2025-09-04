@@ -18,6 +18,8 @@ interface DownloadResult {
   quality: string
   size?: string
   preferred?: boolean
+  watermark?: boolean
+  hasAudio?: boolean
 }
 
 interface ApiResponse {
@@ -380,7 +382,7 @@ export default function Downloader() {
                             </Badge>
                             {result.preferred && (
                               <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">
-                                推荐
+                                Best
                               </Badge>
                             )}
                           </div>
