@@ -671,6 +671,9 @@ async function scrapeRedGifsPage(url, videoId) {
     return null;
   } catch (error) {
     console.error('Scraping error:', error);
+    console.log('Method:', request.method);
+    console.log('Pathname:', url.pathname);
+    console.log('Full URL:', request.url);
     return null;
   }
 }
