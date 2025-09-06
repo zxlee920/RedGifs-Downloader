@@ -76,8 +76,8 @@ export default function Downloader() {
     setVideoInfo(null)
 
     try {
-      // Use root path for Cloudflare Workers deployment
-      const apiUrl = '/'
+      // Use dedicated API path to avoid conflicts with static assets
+      const apiUrl = '/api'
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -157,8 +157,8 @@ export default function Downloader() {
         setBatchResults([...results])
 
         try {
-          // Use root path for Cloudflare Workers deployment
-          const apiUrl = '/'
+          // Use dedicated API path to avoid conflicts with static assets
+          const apiUrl = '/api'
           
           const response = await fetch(apiUrl, {
             method: 'POST',
@@ -271,7 +271,9 @@ export default function Downloader() {
             <div className="space-y-2">
               <Label htmlFor="url">RedGifs URL</Label>
               <div className="text-sm text-muted-foreground mb-2">
-              📋 Instructions: Copy RedGifs URL → Tap "More" → "Share" → "Copy link" → Paste below
+                🎵 Enhanced downloader now supports:<br />
+                ✅ Videos with audio • ✅ No watermark versions • ✅ Multiple quality options<br />
+                📋 Instructions: Copy RedGifs URL → Tap "More" → "Share" → "Copy link" → Paste below
               </div>
               <div className="flex gap-2">
                 <Input

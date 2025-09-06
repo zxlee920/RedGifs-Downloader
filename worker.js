@@ -98,7 +98,7 @@ export default {
     }
     
     // Handle POST requests for download API - PRIORITY HANDLING
-    if (request.method === 'POST') {
+    if (request.method === 'POST' && (url.pathname === '/api' || url.pathname === '/')) {
       console.log('POST request received at:', url.pathname);
       try {
         const body = await request.text();
