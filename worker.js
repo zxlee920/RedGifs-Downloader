@@ -97,11 +97,26 @@ export default {
       }
     }
     
-    // Handle POST requests for download API
-    if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download')) {
+    // Handle POST requests for download API - PRIORITY HANDLING
+    if (request.method === 'POST') {
+      console.log('POST request received at:', url.pathname);
       try {
-        const { url: videoUrl } = await request.json();
-
+        const body = await request.text();
+        console.log('Request body:', body);
+        
+        if (!body) {
+          return new Response(JSON.stringify({ error: 'Empty request body' }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          });
+        }
+        
+        const data = JSON.parse(body);
+        const { url: videoUrl } = data;
+        
         if (!videoUrl || !videoUrl.includes('redgifs.com')) {
           return new Response(JSON.stringify({ error: 'Invalid RedGifs URL' }), {
             status: 400,
@@ -111,7 +126,7 @@ export default {
             },
           });
         }
-
+        
         // Extract video ID from URL
         const urlPatterns = [
           /redgifs\.com\/watch\/([a-zA-Z0-9]+)/,
@@ -215,8 +230,8 @@ export default {
           `https://api.redgifs.com/v1/gifs/${videoId}`
         ];
         
-        let response = null;
-        let data = null;
+        let apiResponse = null;
+        let apiData = null;
         
         for (const apiUrl of apiUrls) {
           try {
@@ -231,10 +246,10 @@ export default {
               headers['Authorization'] = `Bearer ${token}`;
             }
             
-            response = await fetch(apiUrl, { headers });
+            apiResponse = await fetch(apiUrl, { headers });
             
-            if (response.ok) {
-              data = await response.json();
+            if (apiResponse.ok) {
+              apiData = await apiResponse.json();
               break;
             }
           } catch (error) {
@@ -243,7 +258,7 @@ export default {
         }
 
         // Check if we have valid API data
-        if (!response?.ok || !data || !data.gif) {
+        if (!apiResponse?.ok || !apiData || !apiData.gif) {
           return new Response(JSON.stringify({ 
             error: 'Unable to fetch video information from RedGifs. The video may be private, deleted, or the URL is incorrect.' 
           }), {
@@ -255,8 +270,8 @@ export default {
           });
         }
 
-        const gif = data.gif;
-        console.log('完整GIF数据:', JSON.stringify(gif, null, 2));
+        const gif = apiData.gif;
+        console.log('Complete GIF data:', JSON.stringify(gif, null, 2));
 
         // Enhanced multi-strategy audio URL acquisition
         const downloads = [];
@@ -455,8 +470,10 @@ export default {
         });
 
       } catch (error) {
+        console.error('POST request error:', error);
         return new Response(JSON.stringify({ 
-          error: 'Internal server error. Please try again later.' 
+          error: 'Internal server error. Please try again later.',
+          details: error.message 
         }), {
           status: 500,
           headers: {
