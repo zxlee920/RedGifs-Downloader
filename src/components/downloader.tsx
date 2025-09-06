@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { Download, Loader2, CheckCircle, AlertCircle, Video, FileImage, List } from 'lucide-react'
+import { Download, Loader2, CheckCircle, AlertCircle, Video, FileImage, List, Volume2, VolumeX, Shield, ShieldAlert } from 'lucide-react'
 import Image from 'next/image'
 
 interface DownloadResult {
@@ -76,7 +76,8 @@ export default function Downloader() {
     setVideoInfo(null)
 
     try {
-      const apiUrl = '/api/download'
+      // Use root path for Cloudflare Workers deployment
+      const apiUrl = '/'
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -93,10 +94,14 @@ export default function Downloader() {
       }
 
       if (data.success && data.downloads) {
-        // 按优先级排序：preferred > video > cover > thumb
+        // Enhanced sorting: preferred > no watermark > has audio > video type
         const sortedDownloads = [...data.downloads].sort((a, b) => {
           if (a.preferred && !b.preferred) return -1
           if (!a.preferred && b.preferred) return 1
+          if (!a.watermark && b.watermark) return -1
+          if (a.watermark && !b.watermark) return 1
+          if (a.hasAudio && !b.hasAudio) return -1
+          if (!a.hasAudio && b.hasAudio) return 1
           if (a.type === 'video' && b.type !== 'video') return -1
           if (a.type !== 'video' && b.type === 'video') return 1
           return 0
@@ -152,7 +157,8 @@ export default function Downloader() {
         setBatchResults([...results])
 
         try {
-          const apiUrl = '/api/download'
+          // Use root path for Cloudflare Workers deployment
+          const apiUrl = '/'
           
           const response = await fetch(apiUrl, {
             method: 'POST',
@@ -265,8 +271,9 @@ export default function Downloader() {
             <div className="space-y-2">
               <Label htmlFor="url">RedGifs URL</Label>
               <div className="text-sm text-muted-foreground mb-2">
-                1. Copy the RedGifs URL: Tap the three dots (More) → Share → Copy link<br />
-                2. Paste the RedGifs URL below to download the video and cover image
+                🎵 Enhanced downloader now supports:<br />
+                ✅ Videos with audio • ✅ No watermark versions • ✅ Multiple quality options<br />
+                📋 Instructions: Copy RedGifs URL → Tap "More" → "Share" → "Copy link" → Paste below
               </div>
               <div className="flex gap-2">
                 <Input
@@ -307,7 +314,11 @@ export default function Downloader() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Download links ready!</span>
+                  <span className="text-sm font-medium">
+                    Download links ready! Found {results.length} options
+                    {videoInfo?.hasAudio && ' • Audio Available'}
+                    {videoInfo?.note && ` • ${videoInfo.note}`}
+                  </span>
                 </div>
                 
                 <div className="flex gap-2 md:gap-6 items-start">
@@ -343,14 +354,40 @@ export default function Downloader() {
                               <div className="text-xs text-muted-foreground">{result.size}</div>
                             )}
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 flex-wrap">
                             <Badge className={`${getTypeColor(result.type)}`}>
                               {result.quality}
                             </Badge>
                             {result.preferred && (
                               <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">
-                                Best
+                                ✨ Best
                               </Badge>
+                            )}
+                            {result.type === 'video' && (
+                              <>
+                                {result.hasAudio ? (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                                    <Volume2 className="h-3 w-3 mr-1" />
+                                    Audio
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-300">
+                                    <VolumeX className="h-3 w-3 mr-1" />
+                                    Silent
+                                  </Badge>
+                                )}
+                                {result.watermark === false ? (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    No Watermark
+                                  </Badge>
+                                ) : result.watermark === true ? (
+                                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-300">
+                                    <ShieldAlert className="h-3 w-3 mr-1" />
+                                    Watermark
+                                  </Badge>
+                                ) : null}
+                              </>
                             )}
                           </div>
                         </div>
@@ -465,12 +502,38 @@ https://redgifs.com/watch/example3...`}
                           <div className="flex-1 space-y-2">
                             {batchResult.results.map((result, resultIndex) => (
                               <div key={resultIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded min-h-[2.5rem]">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   {getIcon(result.type)}
                                   <span className="text-sm hidden sm:inline">{result.filename}</span>
                                   <Badge className={`${getTypeColor(result.type)}`} variant="outline">
-                                    {result.type}
+                                    {result.quality || result.type}
                                   </Badge>
+                                  {result.preferred && (
+                                    <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">
+                                      ✨ Best
+                                    </Badge>
+                                  )}
+                                  {result.type === 'video' && (
+                                    <>
+                                      {result.hasAudio ? (
+                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                                          <Volume2 className="h-2 w-2 mr-1" />
+                                          Audio
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-300">
+                                          <VolumeX className="h-2 w-2 mr-1" />
+                                          Silent
+                                        </Badge>
+                                      )}
+                                      {result.watermark === false && (
+                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                          <Shield className="h-2 w-2 mr-1" />
+                                          Clean
+                                        </Badge>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
                                 <Button 
                                   size="sm" 
