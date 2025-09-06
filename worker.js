@@ -97,26 +97,11 @@ export default {
       }
     }
     
-    // Handle POST requests for download API - PRIORITY HANDLING
-    if (request.method === 'POST' && (url.pathname === '/api' || url.pathname === '/')) {
-      console.log('POST request received at:', url.pathname);
+    // Handle POST requests for download API
+    if (request.method === 'POST' && (url.pathname === '/' || url.pathname === '/api/download')) {
       try {
-        const body = await request.text();
-        console.log('Request body:', body);
-        
-        if (!body) {
-          return new Response(JSON.stringify({ error: 'Empty request body' }), {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          });
-        }
-        
-        const data = JSON.parse(body);
-        const { url: videoUrl } = data;
-        
+        const { url: videoUrl } = await request.json();
+
         if (!videoUrl || !videoUrl.includes('redgifs.com')) {
           return new Response(JSON.stringify({ error: 'Invalid RedGifs URL' }), {
             status: 400,
@@ -126,7 +111,7 @@ export default {
             },
           });
         }
-        
+
         // Extract video ID from URL
         const urlPatterns = [
           /redgifs\.com\/watch\/([a-zA-Z0-9]+)/,
@@ -155,38 +140,20 @@ export default {
           });
         }
 
-        // Try to scrape RedGifs page first for optimal URLs
+        // Try to scrape RedGifs page first
         const scrapedData = await scrapeRedGifsPage(videoUrl, videoId);
         
         if (scrapedData && scrapedData.videoUrl) {
-          const downloads = [];
-          
-          // Add the primary scraped video (optimized for audio + no watermark)
-          downloads.push({
-            type: 'video',
-            url: scrapedData.videoUrl,
-            filename: `${videoId}_optimized.mp4`,
-            quality: 'Optimized HD',
-            hasAudio: scrapedData.hasAudio,
-            watermark: false,
-            preferred: true,
-            size: null
-          });
-
-          // Add additional URL variants for backup
-          if (scrapedData.alternativeUrls && scrapedData.alternativeUrls.length > 0) {
-            scrapedData.alternativeUrls.forEach((altUrl, index) => {
-              downloads.push({
-                type: 'video',
-                url: altUrl.url,
-                filename: `${videoId}_alt_${index + 1}.mp4`,
-                quality: altUrl.quality || `Alt ${index + 1}`,
-                hasAudio: altUrl.hasAudio,
-                watermark: altUrl.watermark || false,
-                size: null
-              });
-            });
-          }
+          const downloads = [
+            {
+              type: 'video',
+              url: scrapedData.videoUrl,
+              filename: `${videoId}_${scrapedData.hasAudio ? 'with_audio' : 'silent'}.mp4`,
+              quality: 'HD',
+              hasAudio: scrapedData.hasAudio,
+              size: null
+            }
+          ];
           
           if (scrapedData.posterUrl) {
             downloads.push({
@@ -198,10 +165,9 @@ export default {
             });
           }
 
-          console.log('Enhanced scraped data result:', { 
+          console.log('Scraped data result:', { 
             hasAudio: scrapedData.hasAudio, 
-            primaryUrl: scrapedData.videoUrl.substring(0, 50) + '...',
-            alternatives: scrapedData.alternativeUrls?.length || 0
+            videoUrl: scrapedData.videoUrl.substring(0, 50) + '...' 
           });
 
           return new Response(JSON.stringify({
@@ -213,7 +179,7 @@ export default {
             likes: 0,
             hasAudio: scrapedData.hasAudio,
             downloads: downloads,
-            note: `Enhanced extraction with ${downloads.length} download options - Audio: ${scrapedData.hasAudio ? 'Yes' : 'No'}, Watermark: No`
+            note: `Content extracted from webpage - ${scrapedData.hasAudio ? 'Has Audio' : 'Silent'}`
           }), {
             headers: {
               'Content-Type': 'application/json',
@@ -230,8 +196,8 @@ export default {
           `https://api.redgifs.com/v1/gifs/${videoId}`
         ];
         
-        let apiResponse = null;
-        let apiData = null;
+        let response = null;
+        let data = null;
         
         for (const apiUrl of apiUrls) {
           try {
@@ -246,10 +212,10 @@ export default {
               headers['Authorization'] = `Bearer ${token}`;
             }
             
-            apiResponse = await fetch(apiUrl, { headers });
+            response = await fetch(apiUrl, { headers });
             
-            if (apiResponse.ok) {
-              apiData = await apiResponse.json();
+            if (response.ok) {
+              data = await response.json();
               break;
             }
           } catch (error) {
@@ -258,7 +224,7 @@ export default {
         }
 
         // Check if we have valid API data
-        if (!apiResponse?.ok || !apiData || !apiData.gif) {
+        if (!response?.ok || !data || !data.gif) {
           return new Response(JSON.stringify({ 
             error: 'Unable to fetch video information from RedGifs. The video may be private, deleted, or the URL is incorrect.' 
           }), {
@@ -270,70 +236,18 @@ export default {
           });
         }
 
-        const gif = apiData.gif;
-        console.log('Complete GIF data:', JSON.stringify(gif, null, 2));
+        const gif = data.gif;
+        console.log('完整GIF数据:', JSON.stringify(gif, null, 2));
 
-        // Enhanced multi-strategy audio URL acquisition
+        // 尝试多种音频URL获取策略
         const downloads = [];
         
-        // Strategy 1: Prioritize embed_url and web_url (no watermark, with audio)
-        const priorityUrls = [];
-        if (gif.urls) {
-          console.log('Available URLs:', Object.keys(gif.urls));
-          
-          // Highest priority: embed_url (unrestricted access, no watermark)
-          if (gif.urls.embed_url) {
-            priorityUrls.push({
-              url: gif.urls.embed_url,
-              quality: 'Embed (No Watermark)',
-              hasAudio: gif.hasAudio !== false,
-              watermark: false,
-              preferred: true
-            });
-          }
-          
-          // Second priority: web_url (website quality)
-          if (gif.urls.web_url) {
-            priorityUrls.push({
-              url: gif.urls.web_url,
-              quality: 'Web (Original)',
-              hasAudio: gif.hasAudio !== false,
-              watermark: false,
-              preferred: !gif.urls.embed_url
-            });
-          }
-          
-          // Third priority: file_url (direct file access)
-          if (gif.urls.file_url) {
-            priorityUrls.push({
-              url: gif.urls.file_url,
-              quality: 'Direct File',
-              hasAudio: gif.hasAudio !== false,
-              watermark: false,
-              preferred: !gif.urls.embed_url && !gif.urls.web_url
-            });
-          }
-        }
-        
-        priorityUrls.forEach((urlObj, index) => {
-          downloads.push({
-            type: 'video',
-            url: urlObj.url,
-            filename: `${gif.id}_priority_${index + 1}.mp4`,
-            quality: urlObj.quality,
-            hasAudio: urlObj.hasAudio,
-            watermark: urlObj.watermark,
-            preferred: urlObj.preferred,
-            size: null
-          });
-        });
-        
-        // Strategy 2: Direct files.redgifs.com URLs (original files, no watermark)
+        // 策略1: 直接从files.redgifs.com构建URL（通常有音频）
         const directUrls = [
           `https://files.redgifs.com/${gif.id}.mp4`,
-          `https://files.redgifs.com/${gif.id}-original.mp4`,
           `https://files.redgifs.com/${gif.id}-hd.mp4`,
-          `https://files.redgifs.com/${gif.id}-source.mp4`
+          `https://files.redgifs.com/${gif.id}-sd.mp4`,
+          `https://files.redgifs.com/${gif.id}-mobile.mp4`
         ];
         
         directUrls.forEach((url, index) => {
@@ -341,50 +255,49 @@ export default {
             type: 'video',
             url: url,
             filename: `${gif.id}_direct_${index + 1}.mp4`,
-            quality: `Direct ${['Original', 'Original Alt', 'HD', 'Source'][index]}`,
+            quality: `Direct ${index + 1}`,
             hasAudio: true,
             watermark: false,
-            preferred: priorityUrls.length === 0 && index === 0,
+            preferred: index === 0,
             size: null
           });
         });
         
-        // Strategy 3: API provided URLs (with watermark assessment)
+        // 策略2: 使用API返回的URLs（如果存在）
         if (gif.urls) {
+          console.log('可用URLs:', Object.keys(gif.urls));
+          
+          // 尝试所有可用的URL
           Object.entries(gif.urls).forEach(([key, url]) => {
-            if (url && typeof url === 'string' && url.includes('.mp4') && 
-                !['embed_url', 'web_url', 'file_url'].includes(key)) {
-              const hasWatermark = key.includes('hd') || key.includes('sd') || key.includes('mobile');
+            if (url && typeof url === 'string' && url.includes('.mp4')) {
               downloads.push({
                 type: 'video',
                 url: url,
-                filename: `${gif.id}_api_${key}.mp4`,
-                quality: `API ${key.toUpperCase()}`,
+                filename: `${gif.id}_${key}.mp4`,
+                quality: `API ${key}`,
                 hasAudio: gif.hasAudio !== false,
-                watermark: hasWatermark,
-                preferred: false,
+                watermark: key.includes('hd') || key.includes('sd'),
                 size: null
               });
             }
           });
         }
         
-        // Strategy 4: Alternative domain URLs (backup)
-        const altDomainUrls = [
-          `https://thumbs4.redgifs.com/${gif.id.charAt(0).toUpperCase()}${gif.id.slice(1)}-source.mp4`,
-          `https://thumbs3.redgifs.com/${gif.id.charAt(0).toUpperCase()}${gif.id.slice(1)}-original.mp4`,
+        // 策略3: 尝试thumbs域名（备用）
+        const thumbsUrls = [
+          `https://thumbs4.redgifs.com/${gif.id.charAt(0).toUpperCase()}${gif.id.slice(1)}-large.mp4`,
+          `https://thumbs3.redgifs.com/${gif.id.charAt(0).toUpperCase()}${gif.id.slice(1)}-large.mp4`,
           `https://thumbs2.redgifs.com/${gif.id.charAt(0).toUpperCase()}${gif.id.slice(1)}-large.mp4`
         ];
         
-        altDomainUrls.forEach((url, index) => {
+        thumbsUrls.forEach((url, index) => {
           downloads.push({
             type: 'video',
             url: url,
-            filename: `${gif.id}_alt_domain_${index + 1}.mp4`,
-            quality: `Alt ${['Source', 'Original', 'Large'][index]}`,
+            filename: `${gif.id}_thumbs_${index + 1}.mp4`,
+            quality: `Thumbs ${index + 1}`,
             hasAudio: true,
             watermark: false,
-            preferred: false,
             size: null
           });
         });
@@ -420,7 +333,7 @@ export default {
           });
         }
 
-        // Strategy 5: Separate audio files (if video and audio are split)
+        // 策略4: 尝试音频文件URL（如果视频和音频分离）
         if (gif.hasAudio) {
           const audioUrls = [
             `https://files.redgifs.com/${gif.id}.m4a`,
@@ -433,24 +346,13 @@ export default {
             downloads.push({
               type: 'audio',
               url: url,
-              filename: `${gif.id}_audio_${index + 1}.${url.endsWith('.aac') ? 'aac' : 'm4a'}`,
-              quality: `Audio ${['Original', 'Alt', 'AAC Original', 'AAC Alt'][index]}`,
+              filename: `${gif.id}_audio_${index + 1}.m4a`,
+              quality: `Audio ${index + 1}`,
               hasAudio: true,
-              watermark: false,
-              preferred: false,
               size: null
             });
           });
         }
-
-        // Sort downloads by preference (preferred first, no watermark prioritized)
-        downloads.sort((a, b) => {
-          if (a.preferred && !b.preferred) return -1;
-          if (!a.preferred && b.preferred) return 1;
-          if (!a.watermark && b.watermark) return -1;
-          if (a.watermark && !b.watermark) return 1;
-          return 0;
-        });
 
         return new Response(JSON.stringify({
           success: true,
@@ -459,9 +361,9 @@ export default {
           duration: gif.duration || 30,
           views: gif.views || 0,
           likes: gif.likes || 0,
-          hasAudio: gif.hasAudio !== false,
+          hasAudio: gif.hasAudio || false,
           downloads: downloads,
-          note: `🎵 Enhanced extraction providing ${downloads.length} optimized download options. Priority: No watermark + Audio support. ${downloads.filter(d => d.preferred).length} preferred option(s) available.`
+          note: `提供了${downloads.length}个下载选项，包括多种音频策略。请尝试不同的选项找到有声音的版本。`
         }), {
           headers: {
             'Content-Type': 'application/json',
@@ -470,10 +372,8 @@ export default {
         });
 
       } catch (error) {
-        console.error('POST request error:', error);
         return new Response(JSON.stringify({ 
-          error: 'Internal server error. Please try again later.',
-          details: error.message 
+          error: 'Internal server error. Please try again later.' 
         }), {
           status: 500,
           headers: {
@@ -671,86 +571,38 @@ async function scrapeRedGifsPage(url, videoId) {
             urls: gif.urls 
           });
           
-          // Enhanced priority order for optimal video URLs (no watermark + audio):
-          // 1. embed_url (unrestricted, no watermark)
-          // 2. web_url (website quality, no watermark)
-          // 3. file_url (direct file access)
-          // 4. Custom constructed URLs from files.redgifs.com
-          // 5. hd/sd as last resort
+          // Priority order for no-watermark URLs with audio:
+          // 1. web_url (best - no watermark, has audio)
+          // 2. file_url (direct file access)
+          // 3. Custom constructed URL from files.redgifs.com
+          // 4. hd/sd as last resort
           
           let videoUrl = null;
-          let hasAudio = gif.hasAudio !== false; // Default to true unless explicitly false
-          const alternativeUrls = [];
+          let hasAudio = gif.hasAudio || false;
           
-          // Primary URL selection
-          if (gif.urls.embed_url) {
-            videoUrl = gif.urls.embed_url;
-            console.log('Using embed_url (unrestricted, no watermark)');
-          } else if (gif.urls.web_url) {
+          if (gif.urls.web_url) {
             videoUrl = gif.urls.web_url;
-            console.log('Using web_url (website quality, no watermark)');
+            console.log('Using web_url (no watermark)');
           } else if (gif.urls.file_url) {
             videoUrl = gif.urls.file_url;
             console.log('Using file_url (direct access)');
-          } else {
-            // Construct optimal URL from files.redgifs.com domain
+          } else if (hasAudio) {
+            // Try to construct files.redgifs.com URL (usually no watermark)
             const fileId = gif.id || videoId;
-            const constructedUrls = [
-              `https://files.redgifs.com/${fileId}.mp4`,
-              `https://files.redgifs.com/${fileId}-original.mp4`,
-              `https://files.redgifs.com/${fileId}-source.mp4`,
-              `https://files.redgifs.com/${fileId}-hd.mp4`
-            ];
-            videoUrl = constructedUrls[0];
-            console.log('Using constructed files.redgifs.com URL (original)');
-            
-            // Add other constructed URLs as alternatives
-            constructedUrls.slice(1).forEach((url, index) => {
-              alternativeUrls.push({
-                url: url,
-                quality: ['Original Alt', 'Source', 'HD'][index],
-                hasAudio: true,
-                watermark: false
-              });
-            });
-          }
-          
-          // Add API URLs as alternatives
-          ['web_url', 'file_url', 'embed_url'].forEach(urlType => {
-            if (gif.urls[urlType] && gif.urls[urlType] !== videoUrl) {
-              alternativeUrls.push({
-                url: gif.urls[urlType],
-                quality: urlType.replace('_url', '').toUpperCase(),
-                hasAudio: hasAudio,
-                watermark: false
-              });
-            }
-          });
-          
-          // Add hd/sd as last resort alternatives
-          if (gif.urls.hd && gif.urls.hd !== videoUrl) {
-            alternativeUrls.push({
-              url: gif.urls.hd,
-              quality: 'HD (may have watermark)',
-              hasAudio: hasAudio,
-              watermark: true
-            });
-          }
-          
-          if (gif.urls.sd && gif.urls.sd !== videoUrl) {
-            alternativeUrls.push({
-              url: gif.urls.sd,
-              quality: 'SD (may have watermark)',
-              hasAudio: hasAudio,
-              watermark: true
-            });
+            videoUrl = `https://files.redgifs.com/${fileId}-hd.mp4`;
+            console.log('Using constructed files.redgifs.com URL');
+          } else if (gif.urls.hd) {
+            videoUrl = gif.urls.hd;
+            console.log('Using hd URL (may have watermark)');
+          } else if (gif.urls.sd) {
+            videoUrl = gif.urls.sd;
+            console.log('Using sd URL (may have watermark)');
           }
           
           return {
             videoUrl: videoUrl,
             posterUrl: gif.urls.poster || gif.urls.thumbnail,
-            hasAudio: hasAudio,
-            alternativeUrls: alternativeUrls
+            hasAudio: hasAudio
           };
         }
       } catch (e) {
